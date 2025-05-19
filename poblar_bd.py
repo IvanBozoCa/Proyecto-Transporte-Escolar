@@ -30,7 +30,7 @@ try:
         """, (
             faker.name(),
             faker.email(),
-            '1234',  # contraseña dummy
+            '1234',  # contraseña
             random.choice(['administrador', 'conductor', 'apoderado']),
             faker.phone_number()
         ))
