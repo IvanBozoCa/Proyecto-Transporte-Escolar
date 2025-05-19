@@ -36,11 +36,29 @@ def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
     db.commit()
     db.refresh(nuevo_usuario)
 
+    # Si es apoderado, crear su registro
+    if usuario.tipo_usuario == "apoderado":
+        nuevo_apoderado = models.Apoderado(
+            id_usuario=nuevo_usuario.id_usuario,
+            direccion="Dirección pendiente"
+        )
+        db.add(nuevo_apoderado)
+
+    # Si es conductor, crear su registro
+    if usuario.tipo_usuario == "conductor":
+        nuevo_conductor = models.Conductor(
+            id_usuario=nuevo_usuario.id_usuario,
+            patente=None,
+            modelo_vehiculo=None,
+            codigo_vinculacion=None
+        )
+        db.add(nuevo_conductor)
+
+    db.commit()
     return nuevo_usuario
 
 
 from app.auth import get_current_user
-
 @router.get("/me")
 def obtener_mi_usuario(usuario_actual: models.Usuario = Depends(get_current_user)):
     return {

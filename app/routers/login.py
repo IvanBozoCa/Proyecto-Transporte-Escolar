@@ -26,6 +26,12 @@ def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales inválidas")
     
     # Crear token JWT
-    token = auth.crear_token({"sub": usuario.email, "tipo_usuario":usuario.tipo_usuario})
+    token = auth.crear_token(
+    {
+    "sub": usuario.email,
+    "tipo_usuario": usuario.tipo_usuario,
+    "id_usuario": usuario.id_usuario,
+    "nombre": usuario.nombre
+    })
     
     return {"access_token": token, "token_type": "bearer"}
