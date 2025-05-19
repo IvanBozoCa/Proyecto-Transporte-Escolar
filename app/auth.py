@@ -2,12 +2,15 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
 from app import schemas, models, database
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
+from fastapi import Request
+from fastapi import Security
+
 
 # Dependencia para obtener la sesión de base de datos
 def get_db():
@@ -53,10 +56,15 @@ def verificar_token(token: str) -> Optional[dict]:
 
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+bearer_scheme = HTTPBearer()
 
 # Función para obtener el usuario desde el token
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.Usuario:
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Security(bearer_scheme),
+    db: Session = Depends(get_db)
+) -> models.Usuario:
+    token = credentials.credentials  # Ahora tomamos el token del objeto HTTPBearer
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudo validar el token",
@@ -76,6 +84,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     
+    # Este valor se toma del payload JWT, no de la base
     user.tipo_usuario_token = tipo_usuario
     
     return user
+
+# Verificar tipo de usuario
+
+def verificar_tipo_usuario(usuario: models.Usuario, tipo_esperado: str):
+    if usuario.tipo_usuario_token != tipo_esperado:
+        raise HTTPException(status_code=403, detail="No tienes permiso para realizar esta acción")

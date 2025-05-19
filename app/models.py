@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Date, Time, ForeignKey, DateTime, UniqueConstraint, DECIMAL
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import relationship
+from app.database import Base
 from datetime import datetime
 
-Base = declarative_base()
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -25,7 +25,9 @@ class Conductor(Base):
     patente = Column(Text)
     modelo_vehiculo = Column(Text)
     codigo_vinculacion = Column(String, unique=True)
-
+    
+    estudiantes = relationship("Estudiante", back_populates="conductor")
+    direcciones = relationship("Direccion", back_populates="conductor", cascade="all, delete-orphan")
     usuario = relationship("Usuario", back_populates="conductor")
     rutas = relationship("Ruta", back_populates="conductor")
     vinculaciones = relationship("Vinculo", back_populates="conductor")
@@ -35,7 +37,8 @@ class Apoderado(Base):
     id_apoderado = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), unique=True, nullable=False)
     direccion = Column(Text)
-
+    
+    direcciones = relationship("Direccion", back_populates="apoderado", cascade="all, delete-orphan")
     usuario = relationship("Usuario", back_populates="apoderado")
     estudiantes = relationship("Estudiante", back_populates="apoderado")
     vinculaciones = relationship("Vinculo", back_populates="apoderado")
@@ -49,10 +52,14 @@ class Estudiante(Base):
     latitud = Column(DECIMAL(9,6))
     longitud = Column(DECIMAL(9,6))
     id_apoderado = Column(Integer, ForeignKey("apoderados.id_apoderado"))
-
+    id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"), nullable=True)
+    
+    conductor = relationship("Conductor", back_populates="estudiantes")
     apoderado = relationship("Apoderado", back_populates="estudiantes")
     paradas = relationship("Parada", back_populates="estudiante")
     asistencias = relationship("Asistencia", back_populates="estudiante")
+    
+
 
 class Acompanante(Base):
     __tablename__ = "acompanantes"
@@ -94,8 +101,6 @@ class Asistencia(Base):
     id_asistencia = Column(Integer, primary_key=True)
     id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"))
     fecha = Column(Date, nullable=False)
-    asistencia = Column(Boolean, default=True)
-    registrada = Column(DateTime, default=datetime.utcnow)
 
     estudiante = relationship("Estudiante", back_populates="asistencias")
 
@@ -118,3 +123,16 @@ class Vinculo(Base):
 
     apoderado = relationship("Apoderado", back_populates="vinculaciones")
     conductor = relationship("Conductor", back_populates="vinculaciones")
+
+
+class Direccion(Base):
+    __tablename__ = "direcciones"
+    id_direccion = Column(Integer, primary_key=True, index=True)
+    latitud = Column(DECIMAL(9,6), nullable=False)
+    longitud = Column(DECIMAL(9,6), nullable=False)
+
+    id_apoderado = Column(Integer, ForeignKey("apoderados.id_apoderado"), nullable=True)
+    id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"), nullable=True)
+
+    apoderado = relationship("Apoderado", back_populates="direcciones")
+    conductor = relationship("Conductor", back_populates="direcciones")
