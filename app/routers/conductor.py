@@ -88,11 +88,6 @@ def obtener_estudiantes_asignados(
 
     return conductor.estudiantes
 
-
-
-
-
-
 #===RUTA===
 @router.post("/rutas", response_model=schemas.RutaResponse)
 def crear_ruta_con_paradas(
