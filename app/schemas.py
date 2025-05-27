@@ -3,7 +3,8 @@ from typing import Optional, List, Literal
 from datetime import date, time, datetime
 from decimal import Decimal
 
-
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
 # ------------------------ Direccion ------------------------
 class DireccionBase(BaseModel):
     latitud: Decimal
@@ -27,9 +28,30 @@ class UsuarioBase(BaseModel):
     email: EmailStr
     telefono: Optional[str] = None
 
-class UsuarioCreate(UsuarioBase):
-    contrasena: str
-    tipo_usuario: str
+class UsuarioCreate(BaseModel):
+    nombre: str = Field(..., min_length=3, description="Nombre completo del usuario")
+    email: EmailStr
+    contrasena: str = Field(..., min_length=8, description="Debe contener mayúscula, minúscula y número")
+    tipo_usuario: str = Field(..., pattern="^(apoderado|conductor)$", description="Debe ser 'apoderado' o 'conductor'")
+    telefono: str = Field(..., description="Número chileno sin +56, debe comenzar con 9 y tener 9 dígitos")
+    
+    @field_validator("telefono")
+    def validar_telefono_chileno(cls, v):
+        if not v.isdigit() or len(v) != 9 or not v.startswith("9"):
+            raise ValueError("El teléfono debe ser numérico, de 9 dígitos y comenzar con 9")
+        return v
+
+    @field_validator("contrasena")
+    def validar_password_segura(cls, v):
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Debe contener al menos una letra mayúscula")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Debe contener al menos una letra minúscula")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Debe contener al menos un número")
+        return v
 
 class UsuarioResponse(UsuarioBase):
     id_usuario: int
@@ -38,6 +60,33 @@ class UsuarioResponse(UsuarioBase):
     model_config = {
         "from_attributes": True
     }
+    
+from pydantic import field_validator
+
+class UsuarioUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=3)
+    email: Optional[EmailStr]
+    contrasena: Optional[str] = Field(None, min_length=8)
+    telefono: Optional[str] = Field(
+        None,
+        min_length=9,
+        max_length=9,
+        pattern=r"^9\d{8}$"
+    )
+
+    @field_validator("contrasena")
+    @classmethod
+    def validar_contrasena_segura(cls, v):
+        if v is None:
+            return v
+        if (
+            not any(c.islower() for c in v)
+            or not any(c.isupper() for c in v)
+            or not any(c.isdigit() for c in v)
+        ):
+            raise ValueError("La contraseña debe contener mayúscula, minúscula y número")
+        return v
+
 
 # ------------------------ Conductor ------------------------
 class ConductorBase(BaseModel):
@@ -139,6 +188,46 @@ class EstudianteResponse(EstudianteBase):
         "from_attributes": True
     }
 
+# ------------------------ Parada ------------------------
+class ParadaBase(BaseModel):
+    orden: int
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    recogido: Optional[bool] = False
+    entregado: Optional[bool] = False
+
+class ParadaCreate(ParadaBase):
+    id_estudiante: int
+    id_ruta: int
+    
+class ReordenarParadasRequest(BaseModel):
+    ordenes: List[dict[str, int]]  # [{ "id_parada": 3, "orden": 1 }, ...]
+
+class ParadaResponse(BaseModel):
+    id_parada: int
+    latitud: float
+    longitud: float
+    orden: int
+    recogido: bool
+    entregado: bool
+    id_estudiante: int
+
+    model_config = {"from_attributes": True}
+
+# ------------------------ Acompañante ------------------------
+class AcompananteBase(BaseModel):
+    nombre: str
+    telefono: Optional[str] = None
+
+class AcompananteCreate(AcompananteBase):
+    pass
+
+class AcompananteResponse(BaseModel):
+    id_acompanante: int
+    nombre: str
+    telefono: str
+
+    model_config = {"from_attributes": True}
 
 
 # ------------------------ Ruta ------------------------
@@ -159,6 +248,18 @@ class ParadaResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+    
+class ParadaManualCreate(BaseModel):
+    id_estudiante: int
+    latitud: float
+    longitud: float
+    orden: int
+
+    
+class RutaManualCreate(BaseModel):
+    fecha: date
+    hora_inicio: time
+    id_acompanante: Optional[int] = None
 
 class RutaResponse(BaseModel):
     id_ruta: int
@@ -167,44 +268,9 @@ class RutaResponse(BaseModel):
     id_conductor: int
     id_acompanante: Optional[int]
     paradas: List[ParadaResponse]
+    acompanante: Optional[AcompananteResponse]
 
-    model_config = {
-        "from_attributes": True
-    }
-# ------------------------ Parada ------------------------
-class ParadaBase(BaseModel):
-    orden: int
-    latitud: Optional[float] = None
-    longitud: Optional[float] = None
-    recogido: Optional[bool] = False
-    entregado: Optional[bool] = False
-
-class ParadaCreate(ParadaBase):
-    id_estudiante: int
-    id_ruta: int
-
-class ParadaResponse(ParadaBase):
-    id_parada: int
-
-    model_config = {
-        "from_attributes": True
-    }
-
-# ------------------------ Acompañante ------------------------
-class AcompananteBase(BaseModel):
-    nombre: str
-    telefono: Optional[str] = None
-
-class AcompananteCreate(AcompananteBase):
-    pass
-
-class AcompananteResponse(AcompananteBase):
-    id_acompanante: int
-
-    model_config = {
-        "from_attributes": True
-    }
-
+    model_config = {"from_attributes": True}
 # ------------------------ Notificación ------------------------
 class NotificacionBase(BaseModel):
     mensaje: str

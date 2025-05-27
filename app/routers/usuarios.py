@@ -66,3 +66,18 @@ def obtener_mi_usuario(usuario_actual: models.Usuario = Depends(get_current_user
         "nombre": usuario_actual.nombre,
         "tipo_usuario": usuario_actual.tipo_usuario_token  # <- del token
     }
+
+@router.put("/me", response_model=schemas.UsuarioResponse)
+def actualizar_mi_usuario(
+    cambios: schemas.UsuarioUpdate,
+    usuario_actual: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    for campo, valor in cambios.dict(exclude_unset=True).items():
+        if campo == "contrasena":
+            valor = auth.hash_contrasena(valor)
+        setattr(usuario_actual, campo, valor)
+
+    db.commit()
+    db.refresh(usuario_actual)
+    return usuario_actual
