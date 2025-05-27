@@ -1,117 +1,156 @@
-import psycopg2
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.database import Base
+from app import models
 from faker import Faker
+from dotenv import load_dotenv
+import os
 import random
+from datetime import date, time
 
-# Conexión a la base de datos
-host = "localhost"
-port = "5432"
-dbname = "transporte_escolar"
-user = "postgres"
-password = "Simon"
+# Cargar variables de entorno
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Instancia de Faker para generar datos falsos
+# Configurar SQLAlchemy
+engine = create_engine(DATABASE_URL)
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Crear las tablas si no existen
+Base.metadata.create_all(bind=engine)
+
+# Instancia de Faker
 faker = Faker()
 
+# 🔄 Limpiar base (orden correcto)
 try:
-    conn = psycopg2.connect(
-        host=host,
-        port=port,
-        dbname=dbname,
-        user=user,
-        password=password
-    )
-    cursor = conn.cursor()
-
-    # Insertar 5 usuarios (administradores, conductores y apoderados)
-    for _ in range(5):
-        cursor.execute("""
-            INSERT INTO usuarios (nombre, email, contrasena, tipo_usuario, telefono)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            faker.name(),
-            faker.email(),
-            '1234',  # contraseña
-            random.choice(['administrador', 'conductor', 'apoderado']),
-            faker.phone_number()
-        ))
-    
-    conn.commit()
-    print("5 usuarios insertados.")
-
-    # Obtener IDs de usuarios tipo conductor
-    cursor.execute("SELECT id_usuario FROM usuarios WHERE tipo_usuario = 'conductor'")
-    conductores_ids = [row[0] for row in cursor.fetchall()]
-
-    # Insertar 5 conductores
-    for id_usuario in conductores_ids:
-        cursor.execute("""
-            INSERT INTO conductores (id_usuario, patente, modelo_vehiculo, codigo_vinculacion)
-            VALUES (%s, %s, %s, %s)
-        """, (
-            id_usuario,
-            faker.license_plate(),
-            faker.word() + " Modelo",
-            faker.uuid4()[:8]  # Código corto
-        ))
-    
-    conn.commit()
-    print("5 conductores insertados.")
-
-    # Obtener IDs de usuarios tipo apoderado
-    cursor.execute("SELECT id_usuario FROM usuarios WHERE tipo_usuario = 'apoderado'")
-    apoderados_ids = [row[0] for row in cursor.fetchall()]
-
-    # Insertar 5 apoderados
-    for id_usuario in apoderados_ids:
-        cursor.execute("""
-            INSERT INTO apoderados (id_usuario, direccion)
-            VALUES (%s, %s)
-        """, (
-            id_usuario,
-            faker.address()
-        ))
-    
-    conn.commit()
-    print("5 apoderados insertados.")
-
-    # Obtener IDs de apoderados para insertar estudiantes
-    cursor.execute("SELECT id_apoderado FROM apoderados")
-    apoderado_ids_final = [row[0] for row in cursor.fetchall()]
-
-    # Insertar 5 estudiantes (1 por apoderado para comenzar)
-    for id_apoderado in apoderado_ids_final:
-        cursor.execute("""
-            INSERT INTO estudiantes (nombre, edad, direccion, latitud, longitud, id_apoderado)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            faker.name(),
-            random.randint(4, 12),
-            faker.address(),
-            faker.latitude(),
-            faker.longitude(),
-            id_apoderado
-        ))
-    
-    conn.commit()
-    print("5 estudiantes insertados.")
-
-    # Insertar 5 acompañantes
-    for _ in range(5):
-        cursor.execute("""
-            INSERT INTO acompanantes (nombre, telefono)
-            VALUES (%s, %s)
-        """, (
-            faker.name(),
-            faker.phone_number()
-        ))
-    
-    conn.commit()
-    print("5 acompanantes insertados.")
-
+    session.query(models.Parada).delete()
+    session.query(models.Ruta).delete()
+    session.query(models.Vinculo).delete()
+    session.query(models.Estudiante).delete()
+    session.query(models.Direccion).delete()
+    session.query(models.Apoderado).delete()
+    session.query(models.Conductor).delete()
+    session.query(models.Usuario).delete()
+    session.commit()
+    print("Base limpiada correctamente.")
 except Exception as e:
-    print("Error:", e)
-finally:
-    if cursor:
-        cursor.close()
-    if conn:
-        conn.close()
+    session.rollback()
+    print("Error al limpiar la base:", e)
+
+# === Crear usuarios ===
+usuarios = []
+for _ in range(2):  # Conductores
+    usuarios.append(models.Usuario(
+        nombre=faker.name(),
+        email=faker.unique.email(),
+        contrasena="1234",
+        tipo_usuario="conductor",
+        telefono=faker.phone_number()
+    ))
+
+for _ in range(2):  # Apoderados
+    usuarios.append(models.Usuario(
+        nombre=faker.name(),
+        email=faker.unique.email(),
+        contrasena="1234",
+        tipo_usuario="apoderado",
+        telefono=faker.phone_number()
+    ))
+
+session.add_all(usuarios)
+session.commit()
+
+# === Crear conductores ===
+conductores = []
+for u in usuarios:
+    if u.tipo_usuario == "conductor":
+        c = models.Conductor(
+            id_usuario=u.id_usuario,
+            patente=faker.license_plate(),
+            modelo_vehiculo=faker.word().capitalize() + " 2024",
+            codigo_vinculacion=faker.unique.uuid4()[:8]
+        )
+        conductores.append(c)
+
+session.add_all(conductores)
+session.commit()
+
+# === Crear apoderados y direcciones ===
+apoderados = []
+for u in usuarios:
+    if u.tipo_usuario == "apoderado":
+        a = models.Apoderado(
+            id_usuario=u.id_usuario,
+            direccion=faker.street_address()
+        )
+        session.add(a)
+        session.commit()
+        apoderados.append(a)
+
+        # Dirección geográfica
+        direccion = models.Direccion(
+            latitud=float(faker.latitude()),
+            longitud=float(faker.longitude()),
+            id_apoderado=a.id_apoderado
+        )
+        session.add(direccion)
+
+session.commit()
+
+# === Vincular apoderados al primer conductor ===
+for a in apoderados:
+    v = models.Vinculo(
+        id_apoderado=a.id_apoderado,
+        id_conductor=conductores[0].id_conductor
+    )
+    session.add(v)
+
+session.commit()
+
+# === Crear estudiantes ===
+estudiantes = []
+for a in apoderados:
+    for _ in range(2):  # 2 por apoderado
+        e = models.Estudiante(
+            nombre=faker.first_name(),
+            edad=random.randint(6, 12),
+            direccion=faker.street_address(),
+            latitud=float(faker.latitude()),
+            longitud=float(faker.longitude()),
+            id_apoderado=a.id_apoderado,
+            id_conductor=conductores[0].id_conductor
+        )
+        estudiantes.append(e)
+
+session.add_all(estudiantes)
+session.commit()
+
+# === Crear una ruta y paradas ===
+ruta = models.Ruta(
+    id_conductor=conductores[0].id_conductor,
+    id_acompanante=None,
+    fecha=date.today(),
+    hora_inicio=time(7, 30),
+    estado="activa"
+)
+session.add(ruta)
+session.commit()
+
+# Paradas según estudiantes
+for orden, e in enumerate(estudiantes, start=1):
+    p = models.Parada(
+        id_estudiante=e.id_estudiante,
+        id_ruta=ruta.id_ruta,
+        orden=orden,
+        latitud=e.latitud,
+        longitud=e.longitud,
+        recogido=False,
+        entregado=False
+    )
+    session.add(p)
+
+session.commit()
+print("Base de datos poblada exitosamente.")
+session.close()
