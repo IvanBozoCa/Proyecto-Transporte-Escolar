@@ -64,7 +64,7 @@ def obtener_mi_usuario(usuario_actual: models.Usuario = Depends(get_current_user
     return {
         "id_usuario": usuario_actual.id_usuario,
         "nombre": usuario_actual.nombre,
-        "tipo_usuario": usuario_actual.tipo_usuario_token  # <- del token
+        "tipo_usuario": usuario_actual.tipo_usuario_token  
     }
 
 @router.put("/me", response_model=schemas.UsuarioResponse)
