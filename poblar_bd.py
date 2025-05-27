@@ -23,7 +23,7 @@ Base.metadata.create_all(bind=engine)
 # Instancia de Faker
 faker = Faker()
 
-# 🔄 Limpiar base (orden correcto)
+#  Limpiar base (orden correcto)
 try:
     session.query(models.Parada).delete()
     session.query(models.Ruta).delete()
