@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from fastapi import Request
 from fastapi import Security
-
+from app.models import Usuario
 
 # Dependencia para obtener la sesión de base de datos
 def get_db():
@@ -84,13 +84,13 @@ def get_current_user(
     if user is None:
         raise credentials_exception
     
-    # Este valor se toma del payload JWT, no de la base
-    user.tipo_usuario_token = tipo_usuario
-    
     return user
 
 # Verificar tipo de usuario
 
-def verificar_tipo_usuario(usuario: models.Usuario, tipo_esperado: str):
-    if usuario.tipo_usuario_token != tipo_esperado:
-        raise HTTPException(status_code=403, detail="No tienes permiso para realizar esta acción")
+def verificar_admin(
+    usuario: Usuario = Depends(get_current_user),
+):
+    if usuario.tipo_usuario != "administrador":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
+    return usuario

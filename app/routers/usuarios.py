@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app import schemas, models, database, auth
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
@@ -12,59 +13,12 @@ def get_db():
     finally:
         db.close()
 
-
-@router.post("/", response_model=schemas.UsuarioResponse)
-def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    # Verificar si ya existe el correo
-    usuario_existente = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
-    if usuario_existente:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El correo ya está registrado")
-    
-    # Hashear la contraseña
-    hashed_pass = auth.hash_contrasena(usuario.contrasena)
-
-    # Crear objeto de usuario
-    nuevo_usuario = models.Usuario(
-        nombre=usuario.nombre,
-        email=usuario.email,
-        telefono=usuario.telefono,
-        tipo_usuario=usuario.tipo_usuario,
-        contrasena=hashed_pass
-    )
-
-    db.add(nuevo_usuario)
-    db.commit()
-    db.refresh(nuevo_usuario)
-
-    # Si es apoderado, crear su registro
-    if usuario.tipo_usuario == "apoderado":
-        nuevo_apoderado = models.Apoderado(
-            id_usuario=nuevo_usuario.id_usuario,
-            direccion="Dirección pendiente"
-        )
-        db.add(nuevo_apoderado)
-
-    # Si es conductor, crear su registro
-    if usuario.tipo_usuario == "conductor":
-        nuevo_conductor = models.Conductor(
-            id_usuario=nuevo_usuario.id_usuario,
-            patente=None,
-            modelo_vehiculo=None,
-            codigo_vinculacion=None
-        )
-        db.add(nuevo_conductor)
-
-    db.commit()
-    return nuevo_usuario
-
-
-from app.auth import get_current_user
-@router.get("/me")
+@router.get("/me", response_model=schemas.UsuarioResponse)
 def obtener_mi_usuario(usuario_actual: models.Usuario = Depends(get_current_user)):
     return {
         "id_usuario": usuario_actual.id_usuario,
         "nombre": usuario_actual.nombre,
-        "tipo_usuario": usuario_actual.tipo_usuario_token  
+        "tipo_usuario": usuario_actual.tipo_usuario
     }
 
 @router.put("/me", response_model=schemas.UsuarioResponse)
