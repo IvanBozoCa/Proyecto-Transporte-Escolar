@@ -2,13 +2,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # Datos de conexión
-DB_USER = "postgres"
-DB_PASSWORD = "Simon"
+DB_USER = "transporte_escolar_db_c85j_user"
+DB_PASSWORD = "tim8btq8OGz8uydUnEcinFWElGM2Wm0g"
 DB_HOST = "localhost"
 DB_PORT = "5432"
-DB_NAME = "transporte_escolar"
+DB_NAME = "transporte_escolar_db_c85j"
 
-DATABASE_URL = f"postgresql://transporte_escolar_db_user:tA9Nx575L4SBJnDaQ8B7XBBeV5p1U3uK@dpg-d0qjue15pdvs73alno20-a.oregon-postgres.render.com/transporte_escolar_db"
+DATABASE_URL = f"postgresql://transporte_escolar_db_c85j_user:tim8btq8OGz8uydUnEcinFWElGM2Wm0g@dpg-d0v6u795pdvs7385thd0-a.oregon-postgres.render.com/transporte_escolar_db_c85j"
 #f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Conexión a la base de datos
