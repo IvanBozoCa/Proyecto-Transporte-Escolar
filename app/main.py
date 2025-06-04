@@ -12,9 +12,8 @@ models.Base.metadata.create_all(bind=database.engine)
 # Incluir routers activos
 app.include_router(login.router)
 app.include_router(usuarios.router)
+app.include_router(gestion_admin.router) 
 app.include_router(rutas.router)
-#app.include_router(conductor.router)
-app.include_router(gestion_admin.router)  # <- Este es ahora el núcleo del CRUD de la app
 
 @app.get("/")
 def root():
