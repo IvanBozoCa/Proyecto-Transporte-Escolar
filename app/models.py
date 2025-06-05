@@ -77,7 +77,7 @@ class Estudiante(Base):
     latitud = Column(DECIMAL(9, 6))
     longitud = Column(DECIMAL(9, 6))
     colegio = Column(Text, nullable=True)
-    hora_entrada = Column(Time, nullable=True)  # ← unificamos nombre
+    hora_entrada = Column(Time, nullable=True)  
     activo = Column(Boolean, default=True)
     nombre_apoderado_secundario = Column(String, nullable=True)
     telefono_apoderado_secundario = Column(String, nullable=True)

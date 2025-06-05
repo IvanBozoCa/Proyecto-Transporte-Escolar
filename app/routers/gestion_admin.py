@@ -121,6 +121,32 @@ def crear_conductor_completo(
     db.commit()
 
     return nuevo_usuario
+#============== CONDUCTOR-ESTUDIANTE===========
+@router.get("/conductores-estudiantes", response_model=List[schemas.ConductorConEstudiantes])
+def listar_conductores_con_estudiantes(
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    conductores = db.query(models.Conductor).all()
+    resultado = []
+
+    for conductor in conductores:
+        usuario = conductor.usuario
+        estudiantes = db.query(models.Estudiante).filter_by(id_conductor=conductor.id_conductor).all()
+
+        resultado.append(schemas.ConductorConEstudiantes(
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            patente=conductor.patente,
+            modelo_vehiculo=conductor.modelo_vehiculo,
+            codigo_vinculacion=conductor.codigo_vinculacion,
+            estudiantes=estudiantes
+        ))
+
+    return resultado
+
 
 # ---------- ACOMPAÑANTE ----------
 
@@ -150,20 +176,28 @@ def obtener_apoderados_con_estudiantes(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    apoderados = db.query(models.Usuario).filter_by(tipo_usuario="apoderado").all()
+    usuarios_apoderados = db.query(models.Usuario).filter_by(tipo_usuario="apoderado").all()
     resultado = []
-    for ap in apoderados:
-        estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=ap.id_usuario).all()
+
+    for usuario in usuarios_apoderados:
+        apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario.id_usuario).first()
+        if not apoderado:
+            continue
+
+        estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
+
         resultado.append(schemas.ApoderadoConEstudiantes(
-            id_usuario=ap.id_usuario,
-            nombre=ap.nombre,
-            email=ap.email,
-            telefono=ap.telefono,
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
             estudiantes=estudiantes
         ))
+
     return resultado
 
-@router.get("/conductores", response_model=List[schemas.ConductorConAcompanante])
+
+@router.get("/conductores", response_model=List[schemas.ConductorConEstudiantes])
 def obtener_conductores_con_acompanante(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
@@ -173,7 +207,7 @@ def obtener_conductores_con_acompanante(
     for c in conductores:
         usuario = c.usuario
         acompanante = c.acompanante
-        resultado.append(schemas.ConductorConAcompanante(
+        resultado.append(schemas.ConductorConEstudiantes(
             id_usuario=usuario.id_usuario,
             nombre=usuario.nombre,
             email=usuario.email,
@@ -345,7 +379,7 @@ def editar_datos_conductor(
     }
 
 
-@router.get("/conductor/{id_usuario}", response_model=schemas.ConductorConAcompanante)
+@router.get("/conductor/{id_usuario}", response_model=schemas.ConductorConEstudiantes)
 def obtener_conductor_detalle(
     id_usuario: int,
     db: Session = Depends(get_db),
@@ -358,7 +392,7 @@ def obtener_conductor_detalle(
     conductor = usuario.conductor
     acompanante = conductor.acompanante
 
-    return schemas.ConductorConAcompanante(
+    return schemas.ConductorConEstudiantes(
         id_usuario=usuario.id_usuario,
         nombre=usuario.nombre,
         email=usuario.email,
@@ -410,3 +444,40 @@ def obtener_puntos_ruta_para_mapa(
     ]
 
     return puntos
+@router.get("/listado-general", response_model=List[schemas.FilaListadoGeneral])
+def obtener_listado_general(
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    estudiantes = db.query(models.Estudiante).all()
+    listado = []
+
+    for est in estudiantes:
+        # Buscar apoderado y su usuario
+        apoderado = db.query(models.Apoderado).filter_by(id_apoderado=est.id_apoderado).first()
+        nombre_apoderado = "No asignado"
+        if apoderado:
+            usuario_apoderado = db.query(models.Usuario).filter_by(id_usuario=apoderado.id_usuario).first()
+            if usuario_apoderado:
+                nombre_apoderado = usuario_apoderado.nombre
+
+        # Buscar conductor y su usuario
+        nombre_conductor = "No asignado"
+        if est.id_conductor:
+            conductor = db.query(models.Conductor).filter_by(id_conductor=est.id_conductor).first()
+            if conductor:
+                usuario_conductor = db.query(models.Usuario).filter_by(id_usuario=conductor.id_usuario).first()
+                if usuario_conductor:
+                    nombre_conductor = usuario_conductor.nombre
+
+        # Agregar fila
+        listado.append(schemas.FilaListadoGeneral(
+            nombre_apoderado=nombre_apoderado,
+            nombre_estudiante=est.nombre,
+            edad=est.edad,
+            direccion=est.direccion,
+            curso=est.colegio,  # Puedes cambiar a est.curso si usas ese nombre
+            nombre_conductor=nombre_conductor
+        ))
+
+    return listado

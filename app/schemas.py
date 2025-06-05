@@ -32,6 +32,8 @@ class UsuarioUpdate(BaseModel):
 class EstudianteCreate(BaseModel):
     nombre: str
     edad: int
+    curso:str
+    colegio:str
     direccion: str
     latitud: float
     longitud: float
@@ -43,6 +45,8 @@ class EstudianteResponse(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
+    curso:str
+    colegio:str
     direccion: str
     latitud: float
     longitud: float
@@ -56,6 +60,8 @@ class EstudianteResponse(BaseModel):
 class EstudianteUpdate(BaseModel):
     nombre: Optional[str]
     edad: Optional[int]
+    curso:Optional[str]
+    colegio:Optional[str]
     direccion: Optional[str]
     latitud: Optional[float]
     longitud: Optional[float]
@@ -67,10 +73,26 @@ class EstudianteSimple(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
+    curso:str
+    colegio:str
     direccion: str
     hora_entrada: time
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        
+class EstudianteEnConductor(BaseModel):
+    id_estudiante: int
+    nombre: str
+    edad: int
+    curso:str
+    colegio:str
+    direccion: str
+    latitud: float
+    longitud: float
+    hora_entrada: Optional[time]
 
     class Config:
         from_attributes = True
@@ -124,7 +146,7 @@ class ConductorCompleto(BaseModel):
     usuario: UsuarioCreate
     datos_conductor: ConductorCreateDatos
 
-class ConductorConAcompanante(BaseModel):
+class ConductorConEstudiantes(BaseModel):
     id_usuario: int
     nombre: str
     email: str
@@ -132,7 +154,7 @@ class ConductorConAcompanante(BaseModel):
     patente: str
     modelo_vehiculo: str
     codigo_vinculacion: str
-    acompanante: Optional[AcompananteResponse] = None
+    estudiantes: List[EstudianteEnConductor] = []
 
     class Config:
         from_attributes = True
@@ -179,3 +201,14 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    
+class FilaListadoGeneral(BaseModel):
+    nombre_apoderado: str
+    nombre_estudiante: str
+    edad: Optional[int] 
+    direccion: Optional[str] 
+    curso: Optional[str] 
+    nombre_conductor: str
+
+    class Config:
+        from_attributes = True
