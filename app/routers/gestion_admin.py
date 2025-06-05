@@ -115,7 +115,6 @@ def crear_conductor_completo(
         id_usuario=nuevo_usuario.id_usuario,
         patente=datos.datos_conductor.patente,
         modelo_vehiculo=datos.datos_conductor.modelo_vehiculo,
-        codigo_vinculacion=datos.datos_conductor.codigo_vinculacion
     )
     db.add(nuevo_conductor)
     db.commit()
@@ -141,7 +140,6 @@ def listar_conductores_con_estudiantes(
             telefono=usuario.telefono,
             patente=conductor.patente,
             modelo_vehiculo=conductor.modelo_vehiculo,
-            codigo_vinculacion=conductor.codigo_vinculacion,
             estudiantes=estudiantes
         ))
 
@@ -214,7 +212,6 @@ def obtener_conductores_con_acompanante(
             telefono=usuario.telefono,
             patente=c.patente,
             modelo_vehiculo=c.modelo_vehiculo,
-            codigo_vinculacion=c.codigo_vinculacion,
             acompanante=acompanante
         ))
     return resultado
@@ -374,7 +371,6 @@ def editar_datos_conductor(
             "id": conductor.id_conductor,
             "patente": conductor.patente,
             "modelo_vehiculo": conductor.modelo_vehiculo,
-            "codigo_vinculacion": conductor.codigo_vinculacion
         }
     }
 
@@ -399,7 +395,6 @@ def obtener_conductor_detalle(
         telefono=usuario.telefono,
         patente=conductor.patente,
         modelo_vehiculo=conductor.modelo_vehiculo,
-        codigo_vinculacion=conductor.codigo_vinculacion,
         acompanante=acompanante
     )
 @router.get("/conductor/{id_usuario}/puntos-mapa")

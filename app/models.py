@@ -28,7 +28,6 @@ class Conductor(Base):
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), unique=True, nullable=False)
     patente = Column(Text)
     modelo_vehiculo = Column(Text)
-    codigo_vinculacion = Column(String, unique=True)
     id_acompanante = Column(Integer, ForeignKey("acompanantes.id_acompanante"), nullable=True)
 
     estudiantes = relationship("Estudiante", back_populates="conductor")
@@ -76,7 +75,7 @@ class Estudiante(Base):
     direccion = Column(Text)
     latitud = Column(DECIMAL(9, 6))
     longitud = Column(DECIMAL(9, 6))
-    colegio = Column(Text, nullable=True)
+    #colegio = Column(Text, nullable=True)
     hora_entrada = Column(Time, nullable=True)  
     activo = Column(Boolean, default=True)
     nombre_apoderado_secundario = Column(String, nullable=True)

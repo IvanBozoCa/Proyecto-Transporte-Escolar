@@ -32,8 +32,8 @@ class UsuarioUpdate(BaseModel):
 class EstudianteCreate(BaseModel):
     nombre: str
     edad: int
-    curso:str
-    colegio:str
+    #curso:str
+    #colegio:str
     direccion: str
     latitud: float
     longitud: float
@@ -45,8 +45,8 @@ class EstudianteResponse(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:str
-    colegio:str
+    #curso:str
+    #colegio:str
     direccion: str
     latitud: float
     longitud: float
@@ -60,8 +60,8 @@ class EstudianteResponse(BaseModel):
 class EstudianteUpdate(BaseModel):
     nombre: Optional[str]
     edad: Optional[int]
-    curso:Optional[str]
-    colegio:Optional[str]
+    #curso:Optional[str]
+    #colegio:Optional[str]
     direccion: Optional[str]
     latitud: Optional[float]
     longitud: Optional[float]
@@ -73,8 +73,8 @@ class EstudianteSimple(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:str
-    colegio:str
+    #curso:str
+    #colegio:str
     direccion: str
     hora_entrada: time
     nombre_apoderado_secundario: Optional[str] = None
@@ -87,8 +87,8 @@ class EstudianteEnConductor(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:str
-    colegio:str
+    #curso:str
+    #colegio:str
     direccion: str
     latitud: float
     longitud: float
@@ -140,7 +140,7 @@ class AcompananteResponse(BaseModel):
 class ConductorCreateDatos(BaseModel):
     patente: str
     modelo_vehiculo: str
-    codigo_vinculacion: str
+
 
 class ConductorCompleto(BaseModel):
     usuario: UsuarioCreate
@@ -153,7 +153,7 @@ class ConductorConEstudiantes(BaseModel):
     telefono: str
     patente: str
     modelo_vehiculo: str
-    codigo_vinculacion: str
+
     estudiantes: List[EstudianteEnConductor] = []
 
     class Config:
@@ -162,7 +162,7 @@ class ConductorConEstudiantes(BaseModel):
 class ConductorUpdateDatos(BaseModel):
     patente: Optional[str]
     modelo_vehiculo: Optional[str]
-    codigo_vinculacion: Optional[str]
+
 class UbicacionConductorCreate(BaseModel):
     latitud: float
     longitud: float
