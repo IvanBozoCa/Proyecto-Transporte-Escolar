@@ -21,11 +21,15 @@ class UsuarioResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
 class UsuarioUpdate(BaseModel):
-    nombre: Optional[str] = None
-    email: Optional[EmailStr] = None
-    telefono: Optional[str] = None
-    contrasena: Optional[str] = None
+    nombre: Optional[str] 
+    email: Optional[EmailStr] 
+    telefono: Optional[str] 
+    contrasena: Optional[str] 
+    
+    class Config:
+        from_attributes = True
 
 # ---------- ESTUDIANTE ----------
 
