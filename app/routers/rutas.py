@@ -15,7 +15,7 @@ def obtener_ruta_diaria(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
-    if usuario_actual.tipo_usuario_token != "conductor" or usuario_actual.id_usuario != id_usuario:
+    if usuario_actual.tipo_usuario != "conductor" or usuario_actual.id_usuario != id_usuario:
         raise HTTPException(status_code=403, detail="No tienes permiso para ver esta ruta")
 
     conductor = db.query(models.Conductor).filter_by(id_usuario=id_usuario).first()
@@ -46,7 +46,7 @@ def obtener_puntos_ruta_para_mapa(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
-    if usuario_actual.tipo_usuario_token != "conductor" or usuario_actual.id_usuario != id_usuario:
+    if usuario_actual.tipo_usuario != "conductor" or usuario_actual.id_usuario != id_usuario:
         raise HTTPException(status_code=403, detail="No tienes permiso para ver esta ruta")
 
     conductor = db.query(models.Conductor).filter_by(id_usuario=id_usuario).first()

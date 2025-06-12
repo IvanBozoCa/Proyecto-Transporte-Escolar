@@ -94,3 +94,10 @@ def verificar_admin(
     if usuario.tipo_usuario != "administrador":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
     return usuario
+
+def verificar_tipo_usuario(
+    usuario: Usuario = Depends(get_current_user),
+):
+    if usuario.tipo_usuario != "conductor" or "apoderado":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
+    return usuario

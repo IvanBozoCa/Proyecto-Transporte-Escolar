@@ -87,12 +87,24 @@ class EstudianteSimple(BaseModel):
     class Config:
         from_attributes = True
         
+class EstudianteConConductor(BaseModel):
+    id_estudiante: int
+    nombre: str
+    edad: Optional[int]
+    direccion: Optional[str]
+    curso: Optional[str]
+    colegio: Optional[str]
+    nombre_conductor: Optional[str]
+
+    class Config:
+        from_attributes = True
+        
 class EstudianteEnConductor(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:str
-    colegio:str
+    curso:Optional[str]
+    colegio:Optional[str]
     direccion: str
     latitud: float
     longitud: float
@@ -144,11 +156,24 @@ class AcompananteResponse(BaseModel):
 class ConductorCreateDatos(BaseModel):
     patente: str
     modelo_vehiculo: str
+    class Config:
+        from_attributes = True 
+        
+class DatosConductorSchema(BaseModel):
+    patente: str
+    modelo_vehiculo: str
 
+class ConductorInfoResponse(BaseModel):
+    usuario: UsuarioResponse
+    datos_conductor: DatosConductorSchema
+
+    class Config:
+        from_attributes = True
 
 class ConductorCompleto(BaseModel):
-    usuario: UsuarioCreate
+    usuario: UsuarioResponse
     datos_conductor: ConductorCreateDatos
+
 
 class ConductorConEstudiantes(BaseModel):
     id_usuario: int
@@ -166,6 +191,13 @@ class ConductorConEstudiantes(BaseModel):
 class ConductorUpdateDatos(BaseModel):
     patente: Optional[str]
     modelo_vehiculo: Optional[str]
+
+class ConductorDetalle(BaseModel):
+    usuario: UsuarioBase
+    datos_conductor: ConductorUpdateDatos
+
+    class Config:
+        from_attributes = True
 
 class UbicacionConductorCreate(BaseModel):
     latitud: float
