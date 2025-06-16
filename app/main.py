@@ -1,23 +1,40 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app import models
 from app.routers import login, usuarios, gestion_admin, conductor, rutas
+from dotenv import load_dotenv
 
+# Cargar variables de entorno desde un archivo .env (opcional)
+load_dotenv()
+
+# Crear tablas
 models.Base.metadata.create_all(bind=engine)
 
+# Crear app
 app = FastAPI()
 
-# Habilitar CORS
+# Detectar entorno
+ENV = os.getenv("ENV", "development")  # valor por defecto: development
+
+# Configurar CORS dinámico
+if ENV == "production":
+    allowed_origins = [
+        os.getenv("FRONTEND_URL", "https://frontend-escolar.vercel.app")  # puedes setear esta variable en Render
+    ]
+else:
+    allowed_origins = ["*"]  # modo desarrollo local, más permisivo
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Rutas
+# Incluir routers
 app.include_router(login.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
 app.include_router(gestion_admin.router, prefix="/admin", tags=["Administrador"])
