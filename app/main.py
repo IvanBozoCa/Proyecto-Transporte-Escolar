@@ -1,22 +1,29 @@
 from fastapi import FastAPI
-from app import models, database
-from app.routers import login, usuarios, gestion_admin,rutas,apoderado,conductor
+from fastapi.middleware.cors import CORSMiddleware
+from app.database import engine
+from app import models
+from app.routers import login, usuarios, gestion_admin, conductor, rutas
 
+models.Base.metadata.create_all(bind=engine)
 
-# http://127.0.0.1:8000/docs#/
 app = FastAPI()
 
-# Crear todas las tablas en la base de datos
-models.Base.metadata.create_all(bind=database.engine)
+# Habilitar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Incluir routers activos
-app.include_router(login.router)
-app.include_router(usuarios.router)
-app.include_router(gestion_admin.router) 
-app.include_router(rutas.router)
-app.include_router(conductor.router)
-app.include_router(apoderado.router)
+# Rutas
+app.include_router(login.router, prefix="/auth", tags=["Autenticación"])
+app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
+app.include_router(gestion_admin.router, prefix="/admin", tags=["Administrador"])
+app.include_router(conductor.router, prefix="/conductor", tags=["Conductor"])
+app.include_router(rutas.router, prefix="/rutas", tags=["Rutas"])
 
 @app.get("/")
 def root():
-    return {"mensaje": "API de Transporte Escolar"}
+    return {"mensaje": "API para gestión de transporte escolar"}
