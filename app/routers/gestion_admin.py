@@ -93,7 +93,7 @@ def crear_apoderado_con_estudiante(
 
 @router.post("/conductor-completo", response_model=schemas.UsuarioResponse)
 def crear_conductor_completo(
-    datos: schemas.ConductorCompleto,
+    datos: schemas.ConductorCompletoCreate,
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):

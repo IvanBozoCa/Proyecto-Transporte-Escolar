@@ -171,7 +171,7 @@ class ConductorInfoResponse(BaseModel):
         from_attributes = True
 
 class ConductorCompleto(BaseModel):
-    usuario: UsuarioResponse
+    usuario: UsuarioCreate
     datos_conductor: ConductorCreateDatos
 
 
@@ -198,6 +198,13 @@ class ConductorDetalle(BaseModel):
 
     class Config:
         from_attributes = True
+class ConductorCompletoCreate(BaseModel):
+    usuario: UsuarioCreate
+    datos_conductor: ConductorCreateDatos
+
+class ConductorCompletoResponse(BaseModel):
+    usuario: UsuarioResponse
+    datos_conductor: DatosConductorSchema
 
 class UbicacionConductorCreate(BaseModel):
     latitud: float
