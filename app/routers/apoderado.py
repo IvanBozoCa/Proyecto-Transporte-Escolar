@@ -17,7 +17,7 @@ def obtener_mis_estudiantes(
     db: Session = Depends(get_db)
 ):
     # Verificar que el usuario sea apoderado
-    if usuario_actual.tipo_usuario != "apoderado":
+    if usuario_actual.tipo_usuario != "apoderado"or "administrador":
         raise HTTPException(status_code=403, detail="Solo los apoderados pueden acceder a esta información.")
 
     apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
@@ -43,3 +43,46 @@ def obtener_mis_estudiantes(
         ))
 
     return resultado
+
+
+@router.put("/marcar/{id_estudiante}", response_model=schemas.AsistenciaResponse)
+def marcar_asistencia_estudiante(
+    id_estudiante: int,
+    asistencia: schemas.AsistenciaCreate,
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "apoderado"or "administrador":
+        raise HTTPException(status_code=403, detail="Solo los apoderados pueden marcar asistencias.")
+
+    apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not apoderado:
+        raise HTTPException(status_code=404, detail="Apoderado no encontrado.")
+
+    estudiante = db.query(models.Estudiante).filter_by(
+        id_estudiante=id_estudiante, id_apoderado=apoderado.id_apoderado
+    ).first()
+
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="Estudiante no pertenece al apoderado.")
+
+    asistencia_existente = db.query(models.Asistencia).filter_by(
+        id_estudiante=id_estudiante,
+        fecha=asistencia.fecha
+    ).first()
+
+    if asistencia_existente:
+        asistencia_existente.asiste = asistencia.asiste
+        db.commit()
+        db.refresh(asistencia_existente)
+        return asistencia_existente
+    else:
+        nueva_asistencia = models.Asistencia(
+            id_estudiante=id_estudiante,
+            fecha=asistencia.fecha,
+            asiste=asistencia.asiste
+        )
+        db.add(nueva_asistencia)
+        db.commit()
+        db.refresh(nueva_asistencia)
+        return nueva_asistencia

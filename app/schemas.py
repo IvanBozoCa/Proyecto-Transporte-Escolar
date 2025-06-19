@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime,time
-
+from datetime import date
 # ---------- USUARIO ----------
 
 class UsuarioBase(BaseModel):
@@ -41,7 +41,7 @@ class EstudianteCreate(BaseModel):
     direccion: str
     latitud: float
     longitud: float
-    hora_entrada: time
+    #hora_entrada: time
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
 
@@ -54,7 +54,7 @@ class EstudianteResponse(BaseModel):
     direccion: str
     latitud: float
     longitud: float
-    hora_entrada: time
+    #hora_entrada: time
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
 
@@ -69,7 +69,7 @@ class EstudianteUpdate(BaseModel):
     direccion: Optional[str]
     latitud: Optional[float]
     longitud: Optional[float]
-    hora_entrada: Optional[time]
+    #hora_entrada: Optional[time]
     nombre_apoderado_secundario: Optional[str]
     telefono_apoderado_secundario: Optional[str]
 
@@ -80,7 +80,7 @@ class EstudianteSimple(BaseModel):
     curso:str
     colegio:str
     direccion: str
-    hora_entrada: time
+    #hora_entrada: time
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
 
@@ -108,7 +108,7 @@ class EstudianteEnConductor(BaseModel):
     direccion: str
     latitud: float
     longitud: float
-    hora_entrada: Optional[time]
+    #hora_entrada: Optional[time]
 
     class Config:
         from_attributes = True
@@ -219,20 +219,80 @@ class UbicacionConductorResponse(BaseModel):
     class Config:
         from_attributes = True
 
-    
-#========ASISTENCIAS===============
-from datetime import date
+# ========== RUTA ==========
 
-class AsistenciaCreate(BaseModel):
+class RutaEstudianteCreate(BaseModel):
     id_estudiante: int
+    orden: Optional[int] = None  # orden de recogida opcional
+
+class RutaCreate(BaseModel):
+    id_conductor: int
+    id_acompanante: Optional[int] = None
     fecha: date
+    hora_inicio: Optional[time] = None
+    estudiantes: List[RutaEstudianteCreate]
+
+class RutaResponse(BaseModel):
+    id_ruta: int
+    id_conductor: int
+    id_acompanante: Optional[int]
+    fecha: date
+    hora_inicio: Optional[time]
+    estado: str
+    estudiantes: List[RutaEstudianteCreate]
+
+    class Config:
+        from_attributes = True
+
+#========ASISTENCIAS===============
+
+
+class EstudianteRutaInfo(BaseModel):
+    id_estudiante: int
+    nombre: str
     asiste: bool
 
+class RutaDiariaResponse(BaseModel):
+    id_conductor: int
+    fecha: date
+    estudiantes: List[EstudianteRutaInfo]
+    
 class AsistenciaResponse(BaseModel):
     id_asistencia: int
     id_estudiante: int
     fecha: date
     asiste: bool
+
+    class Config:
+        from_attributes = True
+
+class AsistenciaCreate(BaseModel):
+    fecha: date
+    asiste: bool
+
+class AsistenciaHoyResponse(BaseModel):
+    fecha: date
+    asiste: Optional[bool]
+
+    class Config:
+        from_attributes = True        
+        
+class EstudianteConAsistencias(BaseModel):
+    id_estudiante: int
+    nombre: str
+    curso: str
+    colegio: str
+    asistencias: List[AsistenciaResponse] = []
+
+    class Config:
+        from_attributes = True
+        
+class EstudianteConAsistenciaHoy(BaseModel):
+    id_estudiante: int
+    nombre: str
+    curso: str
+    colegio: str
+    asistencia: Optional[AsistenciaHoyResponse] = None
 
     class Config:
         from_attributes = True
@@ -255,3 +315,92 @@ class FilaListadoGeneral(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+
+#===== Todos los usuarios existentes=====
+
+from typing import Optional, Union
+
+class DatosConductor(BaseModel):
+    patente: str
+    modelo_vehiculo: str
+
+    class Config:
+        from_attributes = True
+
+class DatosApoderado(BaseModel):
+    direccion: str
+
+    class Config:
+        from_attributes = True
+
+class DatosAcompanante(BaseModel):
+    nombre_completo: str  # puedes personalizar
+
+    class Config:
+        from_attributes = True
+
+class UsuarioConDatos(BaseModel):
+    id_usuario: int
+    nombre: str
+    email: EmailStr
+    telefono: str
+    tipo_usuario: str
+    datos_conductor: Optional[DatosConductor] = None
+    datos_apoderado: Optional[DatosApoderado] = None
+    datos_acompanante: Optional[DatosAcompanante] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ======= Ruta Fija =======
+class EstudianteBasico(BaseModel):
+    id_estudiante: int
+    nombre: str
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class ParadaRutaFijaCreate(BaseModel):
+    id_estudiante: int
+    orden: int
+
+class ParadaRutaFijaResponse(BaseModel):
+    id_parada_ruta_fija: int
+    orden: int
+    estudiante: EstudianteBasico
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class RutaFijaCreate(BaseModel):
+    id_conductor: int
+    nombre: str
+    descripcion: Optional[str] = None
+    paradas: List[ParadaRutaFijaCreate]
+
+class RutaFijaResponse(BaseModel):
+    id_ruta_fija: int
+    nombre: str
+    id_conductor: int
+    paradas: List[ParadaRutaFijaResponse]
+
+    class Config:
+        from_attributes = True
+        
+class ParadaRutaFijaCreate(BaseModel):
+    id_estudiante: int
+    orden: int
+    
+
+class RutaFijaUpdate(BaseModel):
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    paradas: Optional[List[ParadaRutaFijaCreate]] = None  
+    
+

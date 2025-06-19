@@ -5,7 +5,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
-
+from pydantic import BaseModel
 # ================= USUARIO =================
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -16,16 +16,20 @@ class Usuario(Base):
     tipo_usuario = Column(String, nullable=False)
     telefono = Column(Text)
 
-    apoderado = relationship("Apoderado", back_populates="usuario", uselist=False)
-    conductor = relationship("Conductor", back_populates="usuario", uselist=False)
+    apoderado = relationship("Apoderado", back_populates="usuario", uselist=False,cascade="all, delete")
+    conductor = relationship("Conductor", back_populates="usuario", uselist=False,cascade="all, delete")
     notificaciones = relationship("Notificacion", back_populates="usuario")
 
-
+##
+#Reestructurar las rutas para que sea una ruta fija a lo largo de los dias que se active por las mañanas con la cantidad de estudiantes que asistiran ese dia
+#con esa cantidad de estudiantes se creara la verdadera ruta que se mostrara al conductor y al apoderado con algunas diferencias
+#eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpdmFuQGV4YW1wbGUuY29tIiwidGlwb191c3VhcmlvIjoiYWRtaW5pc3RyYWRvciIsImlkX3VzdWFyaW8iOjIsIm5vbWJyZSI6Ikl2YW4iLCJleHAiOjE3NTAzNDYwMTN9._xtEQF1qmEWu0CHoxi0ES7GCJ0abUi1odFnEcoqwrho
+#
 # ================= CONDUCTOR =================
 class Conductor(Base):
     __tablename__ = "conductores"
     id_conductor = Column(Integer, primary_key=True)
-    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), unique=True, nullable=False)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"), unique=True, nullable=False)
     patente = Column(Text)
     modelo_vehiculo = Column(Text)
     id_acompanante = Column(Integer, ForeignKey("acompanantes.id_acompanante"), nullable=True)
@@ -37,7 +41,7 @@ class Conductor(Base):
     vinculaciones = relationship("Vinculo", back_populates="conductor")
     acompanante = relationship("Acompanante", back_populates="conductores")
     ubicaciones = relationship("UbicacionConductor", back_populates="conductor")
-
+    rutas_fijas = relationship("RutaFija", back_populates="conductor", cascade="all, delete-orphan")
 
 # ================= UBICACIÓN CONDUCTOR =================
 class UbicacionConductor(Base):
@@ -56,10 +60,10 @@ class UbicacionConductor(Base):
 class Apoderado(Base):
     __tablename__ = "apoderados"
     id_apoderado = Column(Integer, primary_key=True)
-    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), unique=True, nullable=False)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario",ondelete="CASCADE"), unique=True, nullable=False)
     direccion = Column(Text)
 
-    direcciones = relationship("Direccion", back_populates="apoderado", cascade="all, delete-orphan")
+    direcciones = relationship("Direccion", back_populates="apoderado",cascade="all, delete")
     usuario = relationship("Usuario", back_populates="apoderado")
     estudiantes = relationship("Estudiante", back_populates="apoderado")
     vinculaciones = relationship("Vinculo", back_populates="apoderado")
@@ -77,7 +81,7 @@ class Estudiante(Base):
     longitud = Column(DECIMAL(9, 6))
     colegio = Column(Text, nullable=True)
     curso=Column(Text, nullable=True)
-    hora_entrada = Column(Time, nullable=True)  
+    #hora_entrada = Column(Time, nullable=True)  
     activo = Column(Boolean, default=True)
     nombre_apoderado_secundario = Column(String, nullable=True)
     telefono_apoderado_secundario = Column(String, nullable=True)
@@ -89,7 +93,9 @@ class Estudiante(Base):
     apoderado = relationship("Apoderado", back_populates="estudiantes")
     paradas = relationship("Parada", back_populates="estudiante")
     asistencias = relationship("Asistencia", back_populates="estudiante")
-
+    rutas_estudiantes = relationship("RutaEstudiante", back_populates="estudiante")
+    paradas = relationship("Parada", back_populates="estudiante")
+    paradas_fijas = relationship("ParadaRutaFija", back_populates="estudiante", cascade="all, delete-orphan")
 
 # ================= ACOMPAÑANTE =================
 class Acompanante(Base):
@@ -109,13 +115,24 @@ class Ruta(Base):
     id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"))
     id_acompanante = Column(Integer, ForeignKey("acompanantes.id_acompanante"))
     fecha = Column(Date, nullable=False)
-    hora_inicio = Column(Time)
+    #hora_inicio = Column(Time)
     estado = Column(String, default="activa")
 
     conductor = relationship("Conductor", back_populates="rutas")
     acompanante = relationship("Acompanante", back_populates="rutas")
     paradas = relationship("Parada", back_populates="ruta")
+    paradas_estudiantes = relationship("RutaEstudiante", back_populates="ruta")
 
+class RutaEstudiante(Base):
+    __tablename__ = "rutas_estudiantes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    id_ruta = Column(Integer, ForeignKey("rutas.id_ruta"), nullable=False)
+    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"), nullable=False)
+    orden = Column(Integer, nullable=True)  # Orden opcional de recogida
+
+    ruta = relationship("Ruta", back_populates="paradas_estudiantes")
+    estudiante = relationship("Estudiante", back_populates="rutas_estudiantes")
 
 # ================= PARADA =================
 class Parada(Base):
@@ -185,3 +202,25 @@ class Direccion(Base):
 
     apoderado = relationship("Apoderado", back_populates="direcciones")
     conductor = relationship("Conductor", back_populates="direcciones")
+    
+    
+    
+# ================== MODELO: Ruta Fija ==================
+class RutaFija(Base):
+    __tablename__ = "rutas_fijas"
+    id_ruta_fija = Column(Integer, primary_key=True)
+    id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"))
+    nombre = Column(String, nullable=False)
+
+    conductor = relationship("Conductor", back_populates="rutas_fijas")
+    paradas = relationship("ParadaRutaFija", back_populates="ruta", cascade="all, delete-orphan")
+
+class ParadaRutaFija(Base):
+    __tablename__ = "paradas_ruta_fija"
+    id_parada_ruta_fija = Column(Integer, primary_key=True)
+    id_ruta_fija = Column(Integer, ForeignKey("rutas_fijas.id_ruta_fija"))
+    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"))
+    orden = Column(Integer)
+
+    ruta = relationship("RutaFija", back_populates="paradas")
+    estudiante = relationship("Estudiante")

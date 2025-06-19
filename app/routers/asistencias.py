@@ -14,7 +14,7 @@ def registrar_asistencia(
     usuario_actual: models.Usuario = Depends(obtener_usuario_actual)
 ):
     # Solo apoderado puede marcar asistencia
-    if usuario_actual.tipo_usuario != "apoderado":
+    if usuario_actual.tipo_usuario != "apoderado" or "administrador" :
         raise HTTPException(status_code=403, detail="Solo apoderados pueden registrar asistencia")
 
     estudiante = db.query(models.Estudiante).filter_by(id_estudiante=datos.id_estudiante).first()
@@ -41,3 +41,10 @@ def registrar_asistencia(
     db.commit()
     db.refresh(nueva)
     return nueva
+
+@router.get("/estudiante-detalle/{id_estudiante}", response_model=schemas.EstudianteConAsistencias)
+def obtener_estudiante_con_asistencias(id_estudiante: int, db: Session = Depends(get_db)):
+    estudiante = db.query(models.Estudiante).filter_by(id_estudiante=id_estudiante).first()
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
+    return estudiante

@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app import models
-from app.routers import login, usuarios, gestion_admin, conductor, rutas
+from app.routers import login, usuarios, gestion_admin, conductor, rutas, apoderado
 from dotenv import load_dotenv
 
 # Cargar variables de entorno desde un archivo .env (opcional)
@@ -39,8 +39,8 @@ app.include_router(login.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
 app.include_router(gestion_admin.router, prefix="/admin", tags=["Administrador"])
 app.include_router(conductor.router, prefix="/conductor", tags=["Conductor"])
-app.include_router(rutas.router, prefix="/rutas", tags=["Rutas"])
-
+app.include_router(apoderado.router, prefix="/apoderado", tags=["Apoderado"])
+app.include_router(rutas.router, prefix="/rutas-fijas", tags=["Rutas Fijas"])
 @app.get("/")
 def root():
     return {"mensaje": "API para gestión de transporte escolar"}

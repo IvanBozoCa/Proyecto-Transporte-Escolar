@@ -75,7 +75,7 @@ def crear_apoderado_con_estudiante(
         direccion=datos.estudiante.direccion,
         latitud=datos.estudiante.latitud,
         longitud=datos.estudiante.longitud,
-        hora_entrada=datos.estudiante.hora_entrada,
+        #hora_entrada=datos.estudiante.hora_entrada,
         id_apoderado=nuevo_apoderado.id_apoderado,  
         nombre_apoderado_secundario=datos.estudiante.nombre_apoderado_secundario,
         telefono_apoderado_secundario=datos.estudiante.telefono_apoderado_secundario
@@ -397,48 +397,7 @@ def obtener_conductor_detalle(
         modelo_vehiculo=conductor.modelo_vehiculo,
         acompanante=acompanante
     )
-@router.get("/conductor/{id_usuario}/puntos-mapa")
-def obtener_puntos_ruta_para_mapa(
-    id_usuario: int,
-    fecha: date = Query(default=date.today()),
-    db: Session = Depends(get_db),
-    usuario_actual: models.Usuario = Depends(get_current_user)
-):
-    if usuario_actual.tipo_usuario != "conductor" or usuario_actual.id_usuario != id_usuario:
-        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta ruta")
 
-    conductor = db.query(models.Conductor).filter_by(id_usuario=id_usuario).first()
-    if not conductor:
-        raise HTTPException(status_code=404, detail="Conductor no encontrado")
-
-    estudiantes = db.query(models.Estudiante).filter_by(id_conductor=conductor.id_conductor).all()
-
-    # Filtrar por asistencia
-    presentes = []
-    for est in estudiantes:
-        asistencia = db.query(models.Asistencia).filter_by(
-            id_estudiante=est.id_estudiante,
-            fecha=fecha,
-            asiste=True
-        ).first()
-        if asistencia:
-            presentes.append(est)
-
-    # Ordenar por hora de entrada
-    presentes_ordenados = sorted(presentes, key=lambda e: e.hora_entrada)
-
-    # Construir respuesta para mapa
-    puntos = [
-        {
-            "nombre": est.nombre,
-            "lat": est.latitud,
-            "lng": est.longitud,
-            "hora_entrada": est.hora_entrada.strftime("%H:%M")
-        }
-        for est in presentes_ordenados
-    ]
-
-    return puntos
 @router.get("/listado-general", response_model=List[schemas.FilaListadoGeneral])
 def obtener_listado_general(
     db: Session = Depends(get_db),
@@ -476,3 +435,44 @@ def obtener_listado_general(
         ))
 
     return listado
+
+
+@router.get("/usuarios", response_model=List[schemas.UsuarioConDatos])
+def listar_todos_los_usuarios(
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    usuarios = db.query(models.Usuario).all()
+    resultado = []
+
+    for usuario in usuarios:
+        item = {
+            "id_usuario": usuario.id_usuario,
+            "nombre": usuario.nombre,
+            "email": usuario.email,
+            "telefono": usuario.telefono,
+            "tipo_usuario": usuario.tipo_usuario,
+            "datos_conductor": None,
+            "datos_apoderado": None,
+            "datos_acompanante": None
+        }
+
+        if usuario.tipo_usuario == "conductor" and usuario.conductor:
+            item["datos_conductor"] = {
+                "patente": usuario.conductor.patente,
+                "modelo_vehiculo": usuario.conductor.modelo_vehiculo
+            }
+
+        elif usuario.tipo_usuario == "apoderado" and usuario.apoderado:
+            item["datos_apoderado"] = {
+                "direccion": usuario.apoderado.direccion
+            }
+
+        elif usuario.tipo_usuario == "acompanante" and usuario.acompanante:
+            item["datos_acompanante"] = {
+                "nombre_completo": usuario.acompanante.nombre
+            }
+
+        resultado.append(item)
+
+    return resultado
