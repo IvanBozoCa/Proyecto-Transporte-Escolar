@@ -53,7 +53,7 @@ db.commit()
 # Crear administradores manualmente
 admin1 = models.Usuario(
     nombre="ivan",
-    email="ivan@example.org",
+    email="ivan@example.com",
     telefono="111111111",
     tipo_usuario="administrador",
     contrasena=hash_contrasena("admin123")
@@ -61,7 +61,7 @@ admin1 = models.Usuario(
 
 admin2 = models.Usuario(
     nombre="lukas",
-    email="lukas@example.org",
+    email="lukas@example.com",
     telefono="222222222",
     tipo_usuario="administrador",
     contrasena=hash_contrasena("admin123")
