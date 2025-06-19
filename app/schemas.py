@@ -5,7 +5,6 @@ from datetime import date
 # ---------- USUARIO ----------
 
 class UsuarioBase(BaseModel):
-    id_usuario: int
     nombre: str
     email: EmailStr
     telefono: Optional[str]
@@ -17,7 +16,6 @@ class UsuarioCreate(UsuarioBase):
     contrasena: str
 
 class UsuarioResponse(BaseModel):
-    id_usuario: int
     nombre: str
     email: EmailStr
     telefono: str
@@ -53,8 +51,8 @@ class EstudianteResponse(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:str
-    colegio:str
+    curso:Optional[str] = None
+    colegio:Optional[str] = None
     direccion: str
     latitud: float
     longitud: float

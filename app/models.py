@@ -9,7 +9,7 @@ from pydantic import BaseModel
 # ================= USUARIO =================
 class Usuario(Base):
     __tablename__ = "usuarios"
-    id_usuario = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, primary_key=True, index=True,autoincrement=True)
     nombre = Column(Text, nullable=False)
     email = Column(Text, nullable=False, unique=True)
     contrasena = Column(Text, nullable=False)
