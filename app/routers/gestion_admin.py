@@ -360,20 +360,38 @@ def editar_datos_conductor(
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    for attr, value in cambios.dict(exclude_unset=True).items():
-        setattr(conductor, attr, value)
+    usuario = conductor.usuario
+    if not usuario:
+        raise HTTPException(status_code=400, detail="El conductor no tiene un usuario asociado")
+
+    # Actualizar datos del conductor
+    if cambios.patente is not None:
+        conductor.patente = cambios.patente
+    if cambios.modelo_vehiculo is not None:
+        conductor.modelo_vehiculo = cambios.modelo_vehiculo
+
+    # Actualizar datos del usuario asociado
+    if cambios.nombre is not None:
+        usuario.nombre = cambios.nombre
+    if cambios.email is not None:
+        usuario.email = cambios.email
+    if cambios.telefono is not None:
+        usuario.telefono = cambios.telefono
 
     db.commit()
     db.refresh(conductor)
+
     return {
-        "mensaje": "Datos del conductor actualizados correctamente",
+        "mensaje": "Datos del conductor y del usuario actualizados correctamente",
         "conductor": {
             "id": conductor.id_conductor,
+            "nombre": usuario.nombre,
+            "email": usuario.email,
+            "telefono": usuario.telefono,
             "patente": conductor.patente,
             "modelo_vehiculo": conductor.modelo_vehiculo,
         }
     }
-
 
 @router.get("/conductor/{id_usuario}", response_model=schemas.ConductorConEstudiantes)
 def obtener_conductor_detalle(
@@ -476,3 +494,39 @@ def listar_todos_los_usuarios(
         resultado.append(item)
 
     return resultado
+
+@router.get("/apoderado/{id_apoderado}", response_model=schemas.ApoderadoResponse)
+def obtener_apoderado_por_id(
+    id_apoderado: int,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    apoderado = db.query(models.Apoderado).filter_by(id_apoderado=id_apoderado).first()
+    if not apoderado:
+        raise HTTPException(status_code=404, detail="Apoderado no encontrado")
+    return apoderado
+
+
+@router.put("/apoderado/{id_apoderado}", response_model=schemas.ApoderadoResponse)
+def editar_apoderado(
+    id_apoderado: int,
+    cambios: schemas.ApoderadoUpdate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    apoderado = db.query(models.Apoderado).filter_by(id_apoderado=id_apoderado).first()
+    if not apoderado:
+        raise HTTPException(status_code=404, detail="Apoderado no encontrado")
+
+    usuario = db.query(models.Usuario).filter_by(id_usuario=apoderado.id_usuario).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
+
+    # Actualizar los campos del usuario
+    for attr, value in cambios.usuario.dict(exclude_unset=True).items():
+        setattr(usuario, attr, value)
+
+    db.commit()
+    db.refresh(apoderado)
+
+    return apoderado

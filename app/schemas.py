@@ -5,9 +5,13 @@ from datetime import date
 # ---------- USUARIO ----------
 
 class UsuarioBase(BaseModel):
+    id_usuario: int
     nombre: str
     email: EmailStr
-    telefono: str
+    telefono: Optional[str]
+
+    class Config:
+        from_attributes = True
 
 class UsuarioCreate(UsuarioBase):
     contrasena: str
@@ -132,6 +136,19 @@ class ApoderadoConEstudiantes(BaseModel):
 
     class Config:
         from_attributes = True
+        
+class ApoderadoResponse(BaseModel):
+    id_apoderado: int
+    usuario: UsuarioBase
+
+    class Config:
+        from_attributes = True
+        
+class ApoderadoUpdate(BaseModel):
+    usuario: UsuarioUpdate 
+
+    class Config:
+        from_attributes = True
 
 # ---------- ACOMPAÑANTE ----------
 
@@ -189,6 +206,9 @@ class ConductorConEstudiantes(BaseModel):
         from_attributes = True
         
 class ConductorUpdateDatos(BaseModel):
+    nombre: Optional[str]
+    email: Optional[EmailStr]
+    telefono: Optional[str]
     patente: Optional[str]
     modelo_vehiculo: Optional[str]
 
