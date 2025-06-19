@@ -349,10 +349,10 @@ def editar_acompanante(
     db.refresh(acompanante)
     return acompanante
 
-@router.put("/conductor-datos/{id_conductor}")
-def editar_datos_conductor(
+@router.put("/conductor-completo/{id_conductor}", response_model=schemas.UsuarioResponse)
+def editar_conductor_completo(
     id_conductor: int,
-    cambios: schemas.ConductorUpdateDatos,
+    datos: schemas.ConductorCompletoCreate,
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
@@ -360,38 +360,25 @@ def editar_datos_conductor(
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    usuario = conductor.usuario
+    usuario = db.query(models.Usuario).filter_by(id_usuario=conductor.id_usuario).first()
     if not usuario:
-        raise HTTPException(status_code=400, detail="El conductor no tiene un usuario asociado")
+        raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
+
+    # Actualizar datos del usuario
+    usuario.nombre = datos.usuario.nombre
+    usuario.email = datos.usuario.email
+    usuario.telefono = datos.usuario.telefono
+    if datos.usuario.contrasena:
+        usuario.contrasena = hash_contrasena(datos.usuario.contrasena)
 
     # Actualizar datos del conductor
-    if cambios.patente is not None:
-        conductor.patente = cambios.patente
-    if cambios.modelo_vehiculo is not None:
-        conductor.modelo_vehiculo = cambios.modelo_vehiculo
-
-    # Actualizar datos del usuario asociado
-    if cambios.nombre is not None:
-        usuario.nombre = cambios.nombre
-    if cambios.email is not None:
-        usuario.email = cambios.email
-    if cambios.telefono is not None:
-        usuario.telefono = cambios.telefono
+    conductor.patente = datos.datos_conductor.patente
+    conductor.modelo_vehiculo = datos.datos_conductor.modelo_vehiculo
 
     db.commit()
-    db.refresh(conductor)
+    db.refresh(usuario)
 
-    return {
-        "mensaje": "Datos del conductor y del usuario actualizados correctamente",
-        "conductor": {
-            "id": conductor.id_conductor,
-            "nombre": usuario.nombre,
-            "email": usuario.email,
-            "telefono": usuario.telefono,
-            "patente": conductor.patente,
-            "modelo_vehiculo": conductor.modelo_vehiculo,
-        }
-    }
+    return usuario
 
 @router.get("/conductor/{id_usuario}", response_model=schemas.ConductorConEstudiantes)
 def obtener_conductor_detalle(
@@ -475,17 +462,29 @@ def listar_todos_los_usuarios(
             "datos_acompanante": None
         }
 
+        # Si es conductor
         if usuario.tipo_usuario == "conductor" and usuario.conductor:
             item["datos_conductor"] = {
                 "patente": usuario.conductor.patente,
                 "modelo_vehiculo": usuario.conductor.modelo_vehiculo
             }
 
+        # Si es apoderado
         elif usuario.tipo_usuario == "apoderado" and usuario.apoderado:
-            item["datos_apoderado"] = {
-                "direccion": usuario.apoderado.direccion
-            }
+            direccion = (
+                db.query(models.Direccion)
+                .filter_by(id_apoderado=usuario.apoderado.id_apoderado)
+                .first()
+            )
+            if direccion:
+                item["datos_apoderado"] = {
+                    "direccion": {
+                        "latitud": direccion.latitud,
+                        "longitud": direccion.longitud
+                    }
+                }
 
+        # Si es acompañante
         elif usuario.tipo_usuario == "acompanante" and usuario.acompanante:
             item["datos_acompanante"] = {
                 "nombre_completo": usuario.acompanante.nombre
@@ -507,10 +506,10 @@ def obtener_apoderado_por_id(
     return apoderado
 
 
-@router.put("/apoderado/{id_apoderado}", response_model=schemas.ApoderadoResponse)
-def editar_apoderado(
+@router.put("/apoderado-estudiante/{id_apoderado}", response_model=schemas.ApoderadoYEstudianteResponse)
+def editar_apoderado_con_estudiante(
     id_apoderado: int,
-    cambios: schemas.ApoderadoUpdate,
+    datos: schemas.ApoderadoYEstudiante,
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
@@ -522,11 +521,33 @@ def editar_apoderado(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
 
-    # Actualizar los campos del usuario
-    for attr, value in cambios.usuario.dict(exclude_unset=True).items():
-        setattr(usuario, attr, value)
+    # Actualizar datos del usuario
+    usuario.nombre = datos.apoderado.nombre
+    usuario.email = datos.apoderado.email
+    usuario.telefono = datos.apoderado.telefono
+    if datos.apoderado.contrasena:
+        usuario.contrasena = hash_contrasena(datos.apoderado.contrasena)
+
+    # Actualizar estudiante
+    estudiante = db.query(models.Estudiante).filter_by(id_apoderado=id_apoderado).first()
+    if estudiante:
+        estudiante.nombre = datos.estudiante.nombre
+        estudiante.edad = datos.estudiante.edad
+        estudiante.direccion = datos.estudiante.direccion
+        estudiante.latitud = datos.estudiante.latitud
+        estudiante.longitud = datos.estudiante.longitud
+        estudiante.nombre_apoderado_secundario = datos.estudiante.nombre_apoderado_secundario
+        estudiante.telefono_apoderado_secundario = datos.estudiante.telefono_apoderado_secundario
 
     db.commit()
     db.refresh(apoderado)
+    db.refresh(estudiante)
 
-    return apoderado
+    return {
+        "id_apoderado": apoderado.id_apoderado,
+        "id_usuario": usuario.id_usuario,
+        "nombre": usuario.nombre,
+        "correo": usuario.email,
+        "telefono": usuario.telefono,
+        "estudiante": estudiante
+    }

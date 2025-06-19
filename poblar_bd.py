@@ -1,88 +1,184 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.database import Base
-from app import models
+from sqlalchemy.orm import Session
 from faker import Faker
-from dotenv import load_dotenv
-import os
+from app.database import SessionLocal, engine
+from app import models
 import random
-from datetime import time
-from app.auth import hash_contrasena
+from datetime import date
+from passlib.context import CryptContext
 
-# Cargar variables de entorno
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
+fake = Faker()
+db: Session = SessionLocal()
 
-# Configurar SQLAlchemy
-engine = create_engine(DATABASE_URL)
-Session = sessionmaker(bind=engine)
-session = Session()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Instancia de Faker
-faker = Faker("es_CL")
+def hash_contrasena(contrasena: str) -> str:
+    return pwd_context.hash(contrasena)
 
-# === Crear 2 CONDUCTORES ===
+# Borrar datos existentes
+tablas = [
+    models.Notificacion,
+    models.Asistencia,
+    models.Parada,
+    models.RutaEstudiante,
+    models.Ruta,
+    models.ParadaRutaFija,
+    models.RutaFija,
+    models.Vinculo,
+    models.Direccion,
+    models.Estudiante,
+    models.Apoderado,
+    models.Conductor,
+    models.Usuario,
+]
+colegios_falsos = [
+    "Colegio Bicentenario Santa María",
+    "Liceo Técnico Profesional Andes",
+    "Escuela República de Chile",
+    "Colegio San Martín",
+    "Instituto La Esperanza"
+]
+
+# Lista de cursos posibles
+cursos_falsos = [
+    "1° Básico", "2° Básico", "3° Básico", "4° Básico",
+    "5° Básico", "6° Básico", "7° Básico", "8° Básico",
+    "1° Medio", "2° Medio", "3° Medio", "4° Medio"
+]
+
+print("Eliminando datos existentes...")
+for tabla in tablas:
+    db.query(tabla).delete()
+db.commit()
+
+# Crear administradores manualmente
+admin1 = models.Usuario(
+    nombre="ivan",
+    email="ivan@example.org",
+    telefono="111111111",
+    tipo_usuario="administrador",
+    contrasena=hash_contrasena("admin123")
+)
+
+admin2 = models.Usuario(
+    nombre="lukas",
+    email="lukas@example.org",
+    telefono="222222222",
+    tipo_usuario="administrador",
+    contrasena=hash_contrasena("admin123")
+)
+
+db.add_all([admin1, admin2])
+db.commit()
+
+# Crear conductores
 conductores = []
-for _ in range(2):
-    user = models.Usuario(
-        nombre=faker.name(),
-        email=faker.unique.email(),
-        contrasena=hash_contrasena("conductor123"),
+for i in range(2):
+    usuario = models.Usuario(
+        nombre=fake.name(),
+        email=fake.unique.email(),
+        telefono=fake.phone_number(),
         tipo_usuario="conductor",
-        telefono=faker.phone_number()
+        contrasena=hash_contrasena("conductor123")
     )
-    session.add(user)
-    session.commit()
+    db.add(usuario)
+    db.flush()
+
     conductor = models.Conductor(
-        id_usuario=user.id_usuario,
-        patente=faker.license_plate(),
-        modelo_vehiculo=f"{faker.word().capitalize()} 2024"
+        id_usuario=usuario.id_usuario,
+        patente=fake.license_plate(),
+        modelo_vehiculo=fake.word().capitalize()
     )
-    session.add(conductor)
-    session.commit()
-    conductores.append(conductor)
-
-# === Crear 20 APODERADOS y 20 ESTUDIANTES ===
-for i in range(20):
-    user = models.Usuario(
-        nombre=faker.name(),
-        email=faker.unique.email(),
-        contrasena=hash_contrasena("apoderado123"),
-        tipo_usuario="apoderado",
-        telefono=faker.phone_number()
-    )
-    session.add(user)
-    session.commit()
-
-    apoderado = models.Apoderado(
-        id_usuario=user.id_usuario,
-        direccion=faker.street_address()
-    )
-    session.add(apoderado)
-    session.commit()
+    db.add(conductor)
+    db.flush()
 
     direccion = models.Direccion(
-        latitud=float(faker.latitude()),
-        longitud=float(faker.longitude()),
-        id_apoderado=apoderado.id_apoderado
+        id_conductor=conductor.id_conductor,
+        latitud=float(fake.latitude()),
+        longitud=float(fake.longitude())
     )
-    session.add(direccion)
-    session.commit()
+    db.add(direccion)
+    conductores.append(conductor)
 
+db.commit()
+
+# Crear apoderados y estudiantes
+for i in range(10):
+    usuario = models.Usuario(
+        nombre=fake.name(),
+        email=fake.unique.email(),
+        telefono=fake.phone_number(),
+        tipo_usuario="apoderado",
+        contrasena=hash_contrasena("apoderado123")
+    )
+    db.add(usuario)
+    db.flush()
+
+    apoderado = models.Apoderado(
+        id_usuario=usuario.id_usuario
+    )
+    db.add(apoderado)
+    db.flush()
+
+    direccion = models.Direccion(
+        id_apoderado=apoderado.id_apoderado,
+        latitud=float(fake.latitude()),
+        longitud=float(fake.longitude())
+    )
+    db.add(direccion)
+    db.flush()
+
+    # Crear estudiante asociado
     estudiante = models.Estudiante(
-        nombre=faker.first_name(),
-        edad=random.randint(6, 12),
-        direccion=apoderado.direccion,
+        nombre=fake.first_name(),
+        direccion=fake.street_address(),
         latitud=direccion.latitud,
         longitud=direccion.longitud,
-        hora_entrada=time(hour=random.randint(7, 8), minute=random.choice([0, 15, 30, 45])),
+        colegio=random.choice(colegios_falsos),
+        curso=random.choice(cursos_falsos),
         id_apoderado=apoderado.id_apoderado,
-        id_conductor=conductores[0].id_conductor if i < 10 else conductores[1].id_conductor,
-        nombre_apoderado_secundario=faker.name(),
-        telefono_apoderado_secundario=faker.phone_number()
+        edad= random.randint(6, 17)
     )
-    session.add(estudiante)
+    db.add(estudiante)
+    db.flush()
 
-session.commit()
-print("Base de datos poblada exitosamente sin borrar datos anteriores.")
-session.close()
+    # Registrar asistencia positiva para hoy
+    asistencia = models.Asistencia(
+        id_estudiante=estudiante.id_estudiante,
+        fecha=date.today(),
+        asiste=True
+    )
+    db.add(asistencia)
+db.commit()
+from sqlalchemy import text
+
+print("Base de datos poblada exitosamente.")
+
+from sqlalchemy import text
+
+secuencias = [
+    "usuarios_id_usuario_seq",
+    "acompanantes_id_acompanante_seq",
+    "apoderados_id_apoderado_seq",
+    "conductores_id_conductor_seq",
+    "notificaciones_id_notificacion_seq",
+    "ubicaciones_conductor_id_ubicacion_seq",
+    "estudiantes_id_estudiante_seq",
+    "rutas_id_ruta_seq",
+    "vinculos_apoderado_conductor_id_vinculo_seq",
+    "direcciones_id_direccion_seq",
+    "asistencias_id_asistencia_seq",
+    "paradas_ruta_fija_id_parada_ruta_fija_seq",
+    "paradas_id_parada_seq",
+    "rutas_estudiantes_id_seq",
+    "rutas_fijas_id_ruta_fija_seq"
+]
+
+print("Reiniciando secuencias de IDs...")
+for secuencia in secuencias:
+    try:
+        db.execute(text(f"ALTER SEQUENCE {secuencia} RESTART WITH 1"))
+        print(f"Secuencia reiniciada: {secuencia}")
+    except Exception as e:
+        print(f"Error al reiniciar {secuencia}: {e}")
+
+db.commit()

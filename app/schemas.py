@@ -344,6 +344,13 @@ class FilaListadoGeneral(BaseModel):
 
 from typing import Optional, Union
 
+class DireccionResponse(BaseModel):
+    latitud: float
+    longitud: float
+
+    class Config:
+        from_attributes = True
+
 class DatosConductor(BaseModel):
     patente: str
     modelo_vehiculo: str
@@ -352,7 +359,7 @@ class DatosConductor(BaseModel):
         from_attributes = True
 
 class DatosApoderado(BaseModel):
-    direccion: str
+    direccion: Optional[DireccionResponse]
 
     class Config:
         from_attributes = True

@@ -20,11 +20,7 @@ class Usuario(Base):
     conductor = relationship("Conductor", back_populates="usuario", uselist=False,cascade="all, delete")
     notificaciones = relationship("Notificacion", back_populates="usuario")
 
-##
-#Reestructurar las rutas para que sea una ruta fija a lo largo de los dias que se active por las mañanas con la cantidad de estudiantes que asistiran ese dia
-#con esa cantidad de estudiantes se creara la verdadera ruta que se mostrara al conductor y al apoderado con algunas diferencias
-#eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpdmFuQGV4YW1wbGUuY29tIiwidGlwb191c3VhcmlvIjoiYWRtaW5pc3RyYWRvciIsImlkX3VzdWFyaW8iOjIsIm5vbWJyZSI6Ikl2YW4iLCJleHAiOjE3NTAzNDYwMTN9._xtEQF1qmEWu0CHoxi0ES7GCJ0abUi1odFnEcoqwrho
-#
+
 # ================= CONDUCTOR =================
 class Conductor(Base):
     __tablename__ = "conductores"
