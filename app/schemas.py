@@ -188,9 +188,11 @@ class ConductorInfoResponse(BaseModel):
         from_attributes = True
 
 class ConductorCompleto(BaseModel):
-    usuario: UsuarioCreate
+    usuario: UsuarioResponse
     datos_conductor: ConductorCreateDatos
-
+    
+    class Config:
+        from_attributes = True
 
 class ConductorConEstudiantes(BaseModel):
     id_usuario: int

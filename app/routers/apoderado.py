@@ -17,7 +17,7 @@ def obtener_mis_estudiantes(
     db: Session = Depends(get_db)
 ):
     # Verificar que el usuario sea apoderado
-    if usuario_actual.tipo_usuario != "apoderado"or "administrador":
+    if usuario_actual.tipo_usuario != "apoderado":
         raise HTTPException(status_code=403, detail="Solo los apoderados pueden acceder a esta información.")
 
     apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
@@ -52,7 +52,7 @@ def marcar_asistencia_estudiante(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
-    if usuario_actual.tipo_usuario != "apoderado"or "administrador":
+    if usuario_actual.tipo_usuario != "apoderado":
         raise HTTPException(status_code=403, detail="Solo los apoderados pueden marcar asistencias.")
 
     apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
