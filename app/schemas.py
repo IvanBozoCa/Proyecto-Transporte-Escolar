@@ -264,6 +264,41 @@ class RutaResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class EstudianteBasico(BaseModel):
+    id_estudiante: int
+    nombre: str
+    direccion: str
+    colegio: Optional[str] = None
+    curso: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ParadaResponse(BaseModel):
+    orden: int
+    latitud: float
+    longitud: float
+    recogido: bool
+    entregado: bool
+    estudiante: EstudianteBasico
+
+    class Config:
+        from_attributes = True
+
+
+class RutaConParadasResponse(BaseModel):
+    id_ruta: int
+    fecha: date
+    estado: str
+    hora_inicio: Optional[time]
+    id_acompanante: Optional[int] = None
+    paradas: List[ParadaResponse]
+
+    class Config:
+        from_attributes = True
+
+
 #========ASISTENCIAS===============
 
 

@@ -393,6 +393,13 @@ def obtener_conductor_detalle(
     conductor = usuario.conductor
     acompanante = conductor.acompanante
 
+    # Obtener estudiantes a partir de las rutas fijas
+    estudiantes = []
+    for ruta in conductor.rutas_fijas:
+        for parada in ruta.paradas:
+            if parada.estudiante:
+                estudiantes.append(parada.estudiante)
+
     return schemas.ConductorConEstudiantes(
         id_usuario=usuario.id_usuario,
         nombre=usuario.nombre,
@@ -400,8 +407,10 @@ def obtener_conductor_detalle(
         telefono=usuario.telefono,
         patente=conductor.patente,
         modelo_vehiculo=conductor.modelo_vehiculo,
-        acompanante=acompanante
+        acompanante=acompanante,
+        estudiantes=estudiantes
     )
+
 
 @router.get("/listado-general", response_model=List[schemas.FilaListadoGeneral])
 def obtener_listado_general(

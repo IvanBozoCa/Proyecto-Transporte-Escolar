@@ -4,6 +4,7 @@ from datetime import date
 from app import models, schemas
 from app.database import get_db
 from app.auth import get_current_user, verificar_admin 
+from datetime import datetime
 
 router = APIRouter(prefix="/rutas-fijas", tags=["Rutas Fijas"])
 @router.post("/rutas-fijas/", response_model=schemas.RutaFijaResponse)
@@ -14,8 +15,7 @@ def crear_ruta_fija(
 ):
     nueva_ruta = models.RutaFija(
         id_conductor=ruta_data.id_conductor,
-        nombre=ruta_data.nombre,
-       # descripcion=ruta_data.descripcion
+        nombre=ruta_data.nombre
     )
     db.add(nueva_ruta)
     db.commit()
@@ -208,42 +208,50 @@ def generar_ruta_dia(
 
     hoy = date.today()
 
-    # Obtener estudiantes con asistencia marcada como True
-    asistencias = db.query(models.Asistencia).filter_by(fecha=hoy, asiste=True).all()
-    ids_presentes = {a.id_estudiante for a in asistencias}
+    asistencias_false = db.query(models.Asistencia).filter_by(fecha=hoy, asiste=False).all()
+    ids_no_asisten = {a.id_estudiante for a in asistencias_false}
 
-    # Filtrar paradas de la ruta fija con estudiantes presentes
     paradas_presentes = [
-        parada for parada in ruta_fija.paradas if parada.id_estudiante in ids_presentes
+        parada for parada in ruta_fija.paradas if parada.id_estudiante not in ids_no_asisten
     ]
 
     if not paradas_presentes:
         raise HTTPException(status_code=400, detail="No hay estudiantes presentes para esta ruta hoy.")
 
-    # Crear nueva ruta
     nueva_ruta = models.Ruta(
         id_conductor=ruta_fija.id_conductor,
         fecha=hoy,
-        estado="activa"
+        estado="activa",
+        hora_inicio=datetime.now().time()  # Asegúrate de tener este campo en el modelo si lo necesitas
     )
     db.add(nueva_ruta)
     db.commit()
     db.refresh(nueva_ruta)
 
-    # Agregar paradas a la nueva ruta
+    estudiantes_respuesta = []
+
     for parada in paradas_presentes:
         estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada.id_estudiante).first()
-        direccion = estudiante.direccion_principal  # Asumimos relación uno a uno (ajustar si es distinto)
+
         nueva_parada = models.Parada(
             id_ruta=nueva_ruta.id_ruta,
-            id_estudiante=parada.id_estudiante,
+            id_estudiante=estudiante.id_estudiante,
             orden=parada.orden,
-            latitud=direccion.latitud,
-            longitud=direccion.longitud
+            latitud=estudiante.latitud,
+            longitud=estudiante.longitud
         )
         db.add(nueva_parada)
+        estudiantes_respuesta.append(estudiante)
 
     db.commit()
     db.refresh(nueva_ruta)
 
-    return nueva_ruta
+    return {
+        "id_ruta": nueva_ruta.id_ruta,
+        "id_conductor": nueva_ruta.id_conductor,
+        "id_acompanante": nueva_ruta.id_acompanante,
+        "fecha": nueva_ruta.fecha,
+        "estado": nueva_ruta.estado,
+        "hora_inicio": nueva_ruta.hora_inicio,
+        "estudiantes": estudiantes_respuesta
+    }
