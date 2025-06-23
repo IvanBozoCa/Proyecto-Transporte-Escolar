@@ -5,7 +5,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
-from pydantic import BaseModel
+
 # ================= USUARIO =================
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -29,9 +29,11 @@ class Conductor(Base):
     patente = Column(Text)
     modelo_vehiculo = Column(Text)
     id_acompanante = Column(Integer, ForeignKey("acompanantes.id_acompanante"), nullable=True)
-
+    casa = Column(String, nullable=True)
+    lat_casa = Column(DECIMAL(9, 6), nullable=True)
+    long_casa = Column(DECIMAL(9, 6), nullable=True)
+    
     estudiantes = relationship("Estudiante", back_populates="conductor")
-    direcciones = relationship("Direccion", back_populates="conductor", cascade="all, delete-orphan")
     usuario = relationship("Usuario", back_populates="conductor")
     rutas = relationship("Ruta", back_populates="conductor")
     vinculaciones = relationship("Vinculo", back_populates="conductor")
@@ -57,9 +59,7 @@ class Apoderado(Base):
     __tablename__ = "apoderados"
     id_apoderado = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario",ondelete="CASCADE"), unique=True, nullable=False)
-    direccion = Column(Text)
-
-    direcciones = relationship("Direccion", back_populates="apoderado",cascade="all, delete")
+    
     usuario = relationship("Usuario", back_populates="apoderado")
     estudiantes = relationship("Estudiante", back_populates="apoderado")
     vinculaciones = relationship("Vinculo", back_populates="apoderado")
@@ -72,13 +72,15 @@ class Estudiante(Base):
     id_estudiante = Column(Integer, primary_key=True)
     nombre = Column(Text, nullable=False)
     edad = Column(Integer)
-    direccion = Column(Text)
-    latitud = Column(DECIMAL(9, 6))
-    longitud = Column(DECIMAL(9, 6))
-    colegio = Column(Text, nullable=True)
-    curso=Column(Text, nullable=True)
-    #hora_entrada = Column(Time, nullable=True)  
+    casa = Column(String, nullable=True)
+    lat_casa = Column(DECIMAL(9, 6), nullable=True)
+    long_casa = Column(DECIMAL(9, 6), nullable=True)
+    colegio = Column(String, nullable=True)
+    lat_colegio = Column(DECIMAL(9, 6), nullable=True)
+    long_colegio = Column(DECIMAL(9, 6), nullable=True)
+    curso = Column(Text, nullable=True)
     activo = Column(Boolean, default=True)
+
     nombre_apoderado_secundario = Column(String, nullable=True)
     telefono_apoderado_secundario = Column(String, nullable=True)
 
@@ -90,7 +92,6 @@ class Estudiante(Base):
     paradas = relationship("Parada", back_populates="estudiante")
     asistencias = relationship("Asistencia", back_populates="estudiante")
     rutas_estudiantes = relationship("RutaEstudiante", back_populates="estudiante")
-    paradas = relationship("Parada", back_populates="estudiante")
     paradas_fijas = relationship("ParadaRutaFija", back_populates="estudiante", cascade="all, delete-orphan")
 
 # ================= ACOMPAÑANTE =================
@@ -185,24 +186,7 @@ class Vinculo(Base):
     fecha_vinculacion = Column(DateTime, default=datetime.utcnow)
 
     apoderado = relationship("Apoderado", back_populates="vinculaciones")
-    conductor = relationship("Conductor", back_populates="vinculaciones")
-
-
-# ================= DIRECCIÓN =================
-class Direccion(Base):
-    __tablename__ = "direcciones"
-    id_direccion = Column(Integer, primary_key=True, index=True)
-    latitud = Column(DECIMAL(9, 6), nullable=False)
-    longitud = Column(DECIMAL(9, 6), nullable=False)
-
-    id_apoderado = Column(Integer, ForeignKey("apoderados.id_apoderado"), nullable=True)
-    id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"), nullable=True)
-
-    apoderado = relationship("Apoderado", back_populates="direcciones")
-    conductor = relationship("Conductor", back_populates="direcciones")
-    
-    
-    
+    conductor = relationship("Conductor", back_populates="vinculaciones")   
 # ================== MODELO: Ruta Fija ==================
 class RutaFija(Base):
     __tablename__ = "rutas_fijas"

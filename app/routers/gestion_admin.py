@@ -42,7 +42,7 @@ def crear_admin_manual(
 
 @router.post("/apoderado-estudiante", response_model=schemas.ApoderadoYEstudianteResponse)
 def crear_apoderado_con_estudiante(
-    datos: schemas.ApoderadoYEstudiante,
+    datos: schemas.ApoderadoYEstudiantecreate,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(verificar_admin)
 ):
@@ -60,10 +60,8 @@ def crear_apoderado_con_estudiante(
     db.commit()
     db.refresh(nuevo_usuario)
 
-
     nuevo_apoderado = models.Apoderado(
-        id_usuario=nuevo_usuario.id_usuario,
-        direccion=datos.estudiante.direccion  
+        id_usuario=nuevo_usuario.id_usuario
     )
     db.add(nuevo_apoderado)
     db.commit()
@@ -72,22 +70,43 @@ def crear_apoderado_con_estudiante(
     nuevo_estudiante = models.Estudiante(
         nombre=datos.estudiante.nombre,
         edad=datos.estudiante.edad,
-        direccion=datos.estudiante.direccion,
-        latitud=datos.estudiante.latitud,
-        longitud=datos.estudiante.longitud,
-        #hora_entrada=datos.estudiante.hora_entrada,
-        id_apoderado=nuevo_apoderado.id_apoderado,  
+        id_apoderado=nuevo_apoderado.id_apoderado,
+        colegio=datos.estudiante.colegio,
+        curso=datos.estudiante.curso,
+        lat_casa=datos.estudiante.lat_casa,
+        long_casa=datos.estudiante.long_casa,
+        lat_colegio=datos.estudiante.lat_colegio,
+        long_colegio=datos.estudiante.long_colegio,
         nombre_apoderado_secundario=datos.estudiante.nombre_apoderado_secundario,
         telefono_apoderado_secundario=datos.estudiante.telefono_apoderado_secundario
     )
     db.add(nuevo_estudiante)
     db.commit()
     db.refresh(nuevo_estudiante)
-
     return schemas.ApoderadoYEstudianteResponse(
-        apoderado=schemas.UsuarioResponse.model_validate(nuevo_usuario),
-        estudiante=schemas.EstudianteResponse.model_validate(nuevo_estudiante)
+        apoderado=schemas.UsuarioResponse(
+        id_usuario=nuevo_usuario.id_usuario,
+        nombre=nuevo_usuario.nombre,
+        email=nuevo_usuario.email,
+        telefono=nuevo_usuario.telefono,
+        tipo_usuario=nuevo_usuario.tipo_usuario
+    ),
+        estudiante=schemas.EstudianteResponse(
+        id_estudiante=nuevo_estudiante.id_estudiante,
+        nombre=nuevo_estudiante.nombre,
+        edad=nuevo_estudiante.edad,
+        curso=nuevo_estudiante.curso,
+        colegio=nuevo_estudiante.colegio,
+        casa= nuevo_estudiante.casa,
+        lat_casa=nuevo_estudiante.lat_casa,
+        long_casa=nuevo_estudiante.long_casa,
+        lat_colegio=nuevo_estudiante.lat_colegio,
+        long_colegio=nuevo_estudiante.long_colegio,
+        nombre_apoderado_secundario=nuevo_estudiante.nombre_apoderado_secundario,
+        telefono_apoderado_secundario=nuevo_estudiante.telefono_apoderado_secundario
     )
+)
+
 
 # ---------- CREAR CONDUCTOR + FURGÓN ----------
 
@@ -190,6 +209,7 @@ def obtener_apoderados_con_estudiantes(
             email=usuario.email,
             telefono=usuario.telefono,
             estudiantes=estudiantes
+            
         ))
 
     return resultado
@@ -383,43 +403,6 @@ def obtener_conductor_detalle(
     )
 
 
-@router.get("/apoderado-estudiante-conductor", response_model=List[schemas.FilaListadoGeneral])
-def obtener_listado_general(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    estudiantes = db.query(models.Estudiante).all()
-    listado = []
-
-    for est in estudiantes:
-        # Buscar apoderado y su usuario
-        apoderado = db.query(models.Apoderado).filter_by(id_apoderado=est.id_apoderado).first()
-        nombre_apoderado = "No asignado"
-        if apoderado:
-            usuario_apoderado = db.query(models.Usuario).filter_by(id_usuario=apoderado.id_usuario).first()
-            if usuario_apoderado:
-                nombre_apoderado = usuario_apoderado.nombre
-
-        # Buscar conductor y su usuario
-        nombre_conductor = "No asignado"
-        if est.id_conductor:
-            conductor = db.query(models.Conductor).filter_by(id_conductor=est.id_conductor).first()
-            if conductor:
-                usuario_conductor = db.query(models.Usuario).filter_by(id_usuario=conductor.id_usuario).first()
-                if usuario_conductor:
-                    nombre_conductor = usuario_conductor.nombre
-
-        # Agregar fila
-        listado.append(schemas.FilaListadoGeneral(
-            nombre_apoderado=nombre_apoderado,
-            nombre_estudiante=est.nombre,
-            edad=est.edad,
-            direccion=est.direccion,
-            curso=est.colegio,  # Puedes cambiar a est.curso si usas ese nombre
-            nombre_conductor=nombre_conductor
-        ))
-
-    return listado
 
 
 @router.get("/usuarios", response_model=List[schemas.UsuarioConDatos])
@@ -445,22 +428,32 @@ def listar_todos_los_usuarios(
         # Si es conductor
         if usuario.tipo_usuario == "conductor" and usuario.conductor:
             item["datos_conductor"] = {
+                "id_conductor": usuario.conductor.id_conductor,
                 "patente": usuario.conductor.patente,
-                "modelo_vehiculo": usuario.conductor.modelo_vehiculo
+                "modelo_vehiculo": usuario.conductor.modelo_vehiculo,
+                "casa": usuario.conductor.casa,
+                "lat_casa": float(usuario.conductor.lat_casa) if usuario.conductor.lat_casa else None,
+                "long_casa": float(usuario.conductor.long_casa) if usuario.conductor.long_casa else None
             }
 
         # Si es apoderado
         elif usuario.tipo_usuario == "apoderado" and usuario.apoderado:
-            direccion = (
-                db.query(models.Direccion)
-                .filter_by(id_apoderado=usuario.apoderado.id_apoderado)
-                .first()
-            )
-            if direccion:
+            estudiante = db.query(models.Estudiante).filter_by(id_apoderado=usuario.apoderado.id_apoderado).first()
+            if estudiante:
                 item["datos_apoderado"] = {
-                    "direccion": {
-                        "latitud": direccion.latitud,
-                        "longitud": direccion.longitud
+                    "id_apoderado": usuario.apoderado.id_apoderado,
+                    "estudiante": {
+                        "id_estudiante": estudiante.id_estudiante,
+                        "nombre": estudiante.nombre,
+                        "edad": estudiante.edad,
+                        "curso": estudiante.curso,
+                        "casa": estudiante.casa,
+                        "lat_casa": float(estudiante.lat_casa) if estudiante.lat_casa else None,
+                        "long_casa": float(estudiante.long_casa) if estudiante.long_casa else None,
+                        "colegio": estudiante.colegio,
+                        "lat_colegio": float(estudiante.lat_colegio) if estudiante.lat_colegio else None,
+                        "long_colegio": float(estudiante.long_colegio) if estudiante.long_colegio else None,
+                        "id_conductor": estudiante.id_conductor
                     }
                 }
 
@@ -473,6 +466,8 @@ def listar_todos_los_usuarios(
         resultado.append(item)
 
     return resultado
+
+
 
 @router.get("/apoderado/{id_apoderado}", response_model=schemas.ApoderadoResponse)
 def obtener_apoderado_por_id(
@@ -519,17 +514,18 @@ def editar_apoderado_con_estudiante(
     if estudiante:
         estudiante.nombre = datos.estudiante.nombre
         estudiante.edad = datos.estudiante.edad
-        estudiante.direccion = datos.estudiante.direccion
-        estudiante.latitud = datos.estudiante.latitud
-        estudiante.longitud = datos.estudiante.longitud
         estudiante.nombre_apoderado_secundario = datos.estudiante.nombre_apoderado_secundario
         estudiante.telefono_apoderado_secundario = datos.estudiante.telefono_apoderado_secundario
         estudiante.curso = datos.estudiante.curso
         estudiante.colegio = datos.estudiante.colegio
-
+        estudiante.lat_casa = datos.estudiante.lat_casa
+        estudiante.long_casa = datos.estudiante.long_casa
+        estudiante.lat_colegio = datos.estudiante.lat_colegio
+        estudiante.long_colegio = datos.estudiante.long_colegio
     db.commit()
     db.refresh(usuario)
     db.refresh(estudiante)
+    
 
     return schemas.ApoderadoYEstudianteResponse(
         apoderado=schemas.UsuarioResponse(
@@ -544,10 +540,10 @@ def editar_apoderado_con_estudiante(
 
 
 
-@router.put("/conductor-completo/{id_conductor}", response_model=schemas.UsuarioResponse)
+@router.put("/conductor-completo/{id_conductor}", response_model=schemas.ConductorCompletoResponse)
 def editar_conductor_completo(
     id_conductor: int,
-    datos: schemas.ConductorCompletoCreate,
+    datos: schemas.ConductorCompletoupdate,
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
@@ -558,23 +554,54 @@ def editar_conductor_completo(
     usuario = db.query(models.Usuario).filter_by(id_usuario=conductor.id_usuario).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
-    
+
     # Verificar si el nuevo email ya está en uso por otro usuario
-    email_existente = db.query(models.Usuario).filter(
-        models.Usuario.email == datos.usuario.email,
-        models.Usuario.id_usuario != usuario.id_usuario  # Excluir el propio usuario
-    ).first()
-    if email_existente:
-        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
+    if datos.usuario.email:
+        email_existente = db.query(models.Usuario).filter(
+            models.Usuario.email == datos.usuario.email,
+            models.Usuario.id_usuario != usuario.id_usuario
+        ).first()
+        if email_existente:
+            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
+
     # Actualizar datos del usuario
-    usuario.nombre = datos.usuario.nombre
-    usuario.email = datos.usuario.email
-    usuario.telefono = datos.usuario.telefono
+    if datos.usuario.nombre:
+        usuario.nombre = datos.usuario.nombre
+    if datos.usuario.email:
+        usuario.email = datos.usuario.email
+    if datos.usuario.telefono:
+        usuario.telefono = datos.usuario.telefono
+    if datos.usuario.casa:
+        conductor.casa = datos.usuario.casa
+    if datos.usuario.lat_casa:
+        conductor.lat_casa = datos.usuario.lat_casa
+    if datos.usuario.long_casa:
+        conductor.long_casa = datos.usuario.long_casa
+
     # Actualizar datos del conductor
-    conductor.patente = datos.datos_conductor.patente
-    conductor.modelo_vehiculo = datos.datos_conductor.modelo_vehiculo
+    if datos.datos_conductor.patente:
+        conductor.patente = datos.datos_conductor.patente
+    if datos.datos_conductor.modelo_vehiculo:
+        conductor.modelo_vehiculo = datos.datos_conductor.modelo_vehiculo
+
 
     db.commit()
     db.refresh(usuario)
+    db.refresh(conductor)
 
-    return usuario
+    return schemas.ConductorCompletoResponse(
+        usuario=schemas.UsuarioResponse(
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            tipo_usuario=usuario.tipo_usuario
+        ),
+        datos_conductor=schemas.DatosConductorSchema(
+            patente=conductor.patente,
+            modelo_vehiculo=conductor.modelo_vehiculo,
+            casa=conductor.casa,
+            lat_casa=conductor.lat_casa,
+            long_casa=conductor.long_casa
+        )
+    )

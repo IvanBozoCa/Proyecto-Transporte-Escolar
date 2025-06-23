@@ -17,43 +17,58 @@ class UsuarioResponse(BaseModel):
     email: EmailStr
     telefono: str
     tipo_usuario: str
-
+    
     class Config:
         from_attributes = True
         
+class UsuarioCreate(BaseModel):
+    nombre: str
+    email: EmailStr
+    telefono: str
+    contrasena: str 
+
 class UsuarioUpdate(BaseModel):
     nombre: Optional[str] 
     email: Optional[EmailStr] 
     telefono: Optional[str] 
-    #contrasena: Optional[str] 
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
     
     class Config:
         from_attributes = True
 
 # ---------- ESTUDIANTE ----------
 
+class Coordenadas(BaseModel):
+    lat: float
+    long: float
+
 class EstudianteCreate(BaseModel):
     nombre: str
     edad: int
-    curso:str
-    colegio:str
-    direccion: str
-    latitud: float
-    longitud: float
-    #hora_entrada: time
+    colegio: Optional[str] = None
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
+    lat_colegio: Optional[float]
+    long_colegio: Optional[float]
+    curso: Optional[str] = None
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
+
 
 class EstudianteResponse(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:Optional[str] = None
-    colegio:Optional[str] = None
-    direccion: str
-    latitud: float
-    longitud: float
-    #hora_entrada: time
+    curso: Optional[str] 
+    colegio: Optional[str]
+    casa: Optional[str]  
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
+    lat_colegio: Optional[float]
+    long_colegio: Optional[float]
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
 
@@ -63,12 +78,13 @@ class EstudianteResponse(BaseModel):
 class EstudianteUpdate(BaseModel):
     nombre: Optional[str]
     edad: Optional[int]
-    curso:Optional[str]
-    colegio:Optional[str]
-    direccion: Optional[str]
-    latitud: Optional[float]
-    longitud: Optional[float]
-    #hora_entrada: Optional[time]
+    curso: Optional[str] = None
+    colegio: Optional[str] = None
+    casa: Optional[str]  # texto
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
+    lat_colegio: Optional[float]
+    long_colegio: Optional[float]
     nombre_apoderado_secundario: Optional[str]
     telefono_apoderado_secundario: Optional[str]
 
@@ -76,21 +92,25 @@ class EstudianteSimple(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:Optional[str]
-    colegio:Optional[str]
-    direccion: str
-    #hora_entrada: time
-    nombre_apoderado_secundario: Optional[str] = None
-    telefono_apoderado_secundario: Optional[str] = None
+    curso: Optional[str]
+    colegio: Optional[str]
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
+    nombre_apoderado_secundario: Optional[str]
+    telefono_apoderado_secundario: Optional[str]
 
     class Config:
         from_attributes = True
+
         
 class EstudianteConConductor(BaseModel):
     id_estudiante: int
     nombre: str
     edad: Optional[int]
-    direccion: Optional[str]
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
     curso: Optional[str]
     colegio: Optional[str]
     nombre_conductor: Optional[str]
@@ -102,21 +122,24 @@ class EstudianteEnConductor(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso:Optional[str]
-    colegio:Optional[str]
-    direccion: str
-    latitud: float
-    longitud: float
-    #hora_entrada: Optional[time]
+    curso: Optional[str]
+    colegio: Optional[str]
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
 
     class Config:
         from_attributes = True
 
 # ---------- APODERADO Y ESTUDIANTE COMBINADO ----------
 
+class ApoderadoYEstudiantecreate(BaseModel):
+    apoderado: UsuarioCreate
+    estudiante: EstudianteCreate
+    
 class ApoderadoYEstudiante(BaseModel):
     apoderado: UsuarioUpdate
-    estudiante: EstudianteCreate
+    estudiante: EstudianteUpdate
 
 class ApoderadoYEstudianteResponse(BaseModel):
     apoderado: UsuarioResponse
@@ -174,7 +197,12 @@ class ConductorCreateDatos(BaseModel):
 class DatosConductorSchema(BaseModel):
     patente: str
     modelo_vehiculo: str
-
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
+    class Config:
+        from_attributes = True
+        
 class ConductorInfoResponse(BaseModel):
     usuario: UsuarioResponse
     datos_conductor: DatosConductorSchema
@@ -203,9 +231,6 @@ class ConductorConEstudiantes(BaseModel):
         from_attributes = True
         
 class ConductorUpdateDatos(BaseModel):
-    nombre: Optional[str]
-    email: Optional[EmailStr]
-    telefono: Optional[str]
     patente: Optional[str]
     modelo_vehiculo: Optional[str]
 
@@ -216,8 +241,12 @@ class ConductorDetalle(BaseModel):
     class Config:
         from_attributes = True
 class ConductorCompletoCreate(BaseModel):
-    usuario: UsuarioUpdate
+    usuario: UsuarioCreate
     datos_conductor: ConductorCreateDatos
+
+class ConductorCompletoupdate(BaseModel):
+    usuario: UsuarioUpdate
+    datos_conductor: ConductorUpdateDatos
 
 class ConductorCompletoResponse(BaseModel):
     usuario: UsuarioResponse
@@ -264,7 +293,9 @@ class RutaResponse(BaseModel):
 class EstudianteBasico(BaseModel):
     id_estudiante: int
     nombre: str
-    direccion: str
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
     colegio: Optional[str] = None
     curso: Optional[str] = None
 
@@ -361,7 +392,9 @@ class FilaListadoGeneral(BaseModel):
     nombre_apoderado: str
     nombre_estudiante: str
     edad: Optional[int] 
-    direccion: Optional[str] 
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
     curso: Optional[str] 
     nombre_conductor: str
 
@@ -372,33 +405,44 @@ class FilaListadoGeneral(BaseModel):
 
 #===== Todos los usuarios existentes=====
 
-from typing import Optional, Union
-
-class DireccionResponse(BaseModel):
-    latitud: float
-    longitud: float
-
-    class Config:
-        from_attributes = True
-
 class DatosConductor(BaseModel):
     patente: str
     modelo_vehiculo: str
-
+    casa: Optional[str] = None
+    lat_casa: Optional[float] = None
+    long_casa: Optional[float] = None
     class Config:
         from_attributes = True
+
+class EstudianteResumen(BaseModel):
+    id_estudiante: int
+    nombre: str
+    edad: Optional[int]
+    curso: Optional[str]
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
+    colegio: Optional[str]
+    lat_colegio: Optional[float]
+    long_colegio: Optional[float]
+    id_conductor: Optional[int]
 
 class DatosApoderado(BaseModel):
-    direccion: Optional[DireccionResponse]
-
+    id_apoderado: int
+    estudiante: EstudianteResumen
     class Config:
         from_attributes = True
-
+    
 class DatosAcompanante(BaseModel):
     nombre_completo: str  # puedes personalizar
 
     class Config:
         from_attributes = True
+        
+class DireccionEstudiante(BaseModel):
+    casa: Optional[str]
+    latitud: Optional[float]
+    longitud: Optional[float]
 
 class UsuarioConDatos(BaseModel):
     id_usuario: int
@@ -409,7 +453,8 @@ class UsuarioConDatos(BaseModel):
     datos_conductor: Optional[DatosConductor] = None
     datos_apoderado: Optional[DatosApoderado] = None
     datos_acompanante: Optional[DatosAcompanante] = None
-
+    direccion_estudiante: Optional[DireccionEstudiante] = None
+    
     class Config:
         from_attributes = True
 

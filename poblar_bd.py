@@ -5,10 +5,10 @@ from app import models
 import random
 from datetime import date
 from passlib.context import CryptContext
+from sqlalchemy import text
 
 fake = Faker()
 db: Session = SessionLocal()
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_contrasena(contrasena: str) -> str:
@@ -24,25 +24,10 @@ tablas = [
     models.ParadaRutaFija,
     models.RutaFija,
     models.Vinculo,
-    models.Direccion,
     models.Estudiante,
     models.Apoderado,
     models.Conductor,
     models.Usuario,
-]
-colegios_falsos = [
-    "Colegio Bicentenario Santa María",
-    "Liceo Técnico Profesional Andes",
-    "Escuela República de Chile",
-    "Colegio San Martín",
-    "Instituto La Esperanza"
-]
-
-# Lista de cursos posibles
-cursos_falsos = [
-    "1° Básico", "2° Básico", "3° Básico", "4° Básico",
-    "5° Básico", "6° Básico", "7° Básico", "8° Básico",
-    "1° Medio", "2° Medio", "3° Medio", "4° Medio"
 ]
 
 print("Eliminando datos existentes...")
@@ -50,8 +35,7 @@ for tabla in tablas:
     db.query(tabla).delete()
 db.commit()
 
-from sqlalchemy import text
-
+# Reiniciar secuencias
 secuencias = [
     "usuarios_id_usuario_seq",
     "acompanantes_id_acompanante_seq",
@@ -62,7 +46,6 @@ secuencias = [
     "estudiantes_id_estudiante_seq",
     "rutas_id_ruta_seq",
     "vinculos_apoderado_conductor_id_vinculo_seq",
-    "direcciones_id_direccion_seq",
     "asistencias_id_asistencia_seq",
     "paradas_ruta_fija_id_parada_ruta_fija_seq",
     "paradas_id_parada_seq",
@@ -77,8 +60,8 @@ for secuencia in secuencias:
         print(f"Secuencia reiniciada: {secuencia}")
     except Exception as e:
         print(f"Error al reiniciar {secuencia}: {e}")
-
 db.commit()
+
 # Crear administradores manualmente
 admin1 = models.Usuario(
     nombre="ivan",
@@ -87,7 +70,6 @@ admin1 = models.Usuario(
     tipo_usuario="administrador",
     contrasena=hash_contrasena("admin123")
 )
-
 admin2 = models.Usuario(
     nombre="lukas",
     email="lukas@example.com",
@@ -95,13 +77,12 @@ admin2 = models.Usuario(
     tipo_usuario="administrador",
     contrasena=hash_contrasena("admin123")
 )
-
 db.add_all([admin1, admin2])
 db.commit()
 
 # Crear conductores
 conductores = []
-for i in range(2):
+for _ in range(2):
     usuario = models.Usuario(
         nombre=fake.name(),
         email=fake.unique.email(),
@@ -115,23 +96,33 @@ for i in range(2):
     conductor = models.Conductor(
         id_usuario=usuario.id_usuario,
         patente=fake.license_plate(),
-        modelo_vehiculo=fake.word().capitalize()
+        modelo_vehiculo=fake.word().capitalize(),
+        casa= "Av. Circunvalación Sur 456",
+        lat_casa=-34.364500,
+        long_casa=-71.652300
+
     )
     db.add(conductor)
-    db.flush()
-
-    direccion = models.Direccion(
-        id_conductor=conductor.id_conductor,
-        latitud=float(fake.latitude()),
-        longitud=float(fake.longitude())
-    )
-    db.add(direccion)
     conductores.append(conductor)
-
+    
 db.commit()
 
+# Lista de colegios y cursos ficticios
+colegios_falsos = [
+    "Colegio Bicentenario Santa María",
+    "Liceo Técnico Profesional Andes",
+    "Escuela República de Chile",
+    "Colegio San Martín",
+    "Instituto La Esperanza"
+]
+cursos_falsos = [
+    "1° Básico", "2° Básico", "3° Básico", "4° Básico",
+    "5° Básico", "6° Básico", "7° Básico", "8° Básico",
+    "1° Medio", "2° Medio", "3° Medio", "4° Medio"
+]
+
 # Crear apoderados y estudiantes
-for i in range(10):
+for _ in range(10):
     usuario = models.Usuario(
         nombre=fake.name(),
         email=fake.unique.email(),
@@ -148,29 +139,25 @@ for i in range(10):
     db.add(apoderado)
     db.flush()
 
-    direccion = models.Direccion(
-        id_apoderado=apoderado.id_apoderado,
-        latitud=float(fake.latitude()),
-        longitud=float(fake.longitude())
-    )
-    db.add(direccion)
-    db.flush()
-
-    # Crear estudiante asociado
     estudiante = models.Estudiante(
         nombre=fake.first_name(),
-        direccion=fake.street_address(),
-        latitud=direccion.latitud,
-        longitud=direccion.longitud,
+        edad=random.randint(6, 17),
+        casa=fake.street_address(),
+        lat_casa=float(fake.latitude()),
+        long_casa=float(fake.longitude()),
         colegio=random.choice(colegios_falsos),
+        lat_colegio=float(fake.latitude()),
+        long_colegio=float(fake.longitude()),
         curso=random.choice(cursos_falsos),
+        activo=True,
+        nombre_apoderado_secundario=fake.name(),
+        telefono_apoderado_secundario=fake.phone_number(),
         id_apoderado=apoderado.id_apoderado,
-        edad= random.randint(6, 17)
+        id_conductor=random.choice(conductores).id_conductor if conductores else None
     )
     db.add(estudiante)
     db.flush()
 
-    # Registrar asistencia positiva para hoy
     asistencia = models.Asistencia(
         id_estudiante=estudiante.id_estudiante,
         fecha=date.today(),
@@ -180,5 +167,3 @@ for i in range(10):
 db.commit()
 
 print("Base de datos poblada exitosamente.")
-
-
