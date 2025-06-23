@@ -42,6 +42,7 @@ def crear_admin_manual(
 
 @router.post("/apoderado-estudiante", response_model=schemas.ApoderadoYEstudianteResponse)
 def crear_apoderado_con_estudiante(
+    
     datos: schemas.ApoderadoYEstudiantecreate,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(verificar_admin)
@@ -106,12 +107,24 @@ def crear_apoderado_con_estudiante(
         telefono_apoderado_secundario=nuevo_estudiante.telefono_apoderado_secundario
     )
 )
+# ---------- ACOMPAÑANTE ----------
 
+@router.post("/acompanantes", response_model=schemas.AcompananteResponse)
+def crear_acompanante(
+    acompanante: schemas.AcompananteCreate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    nuevo = models.Acompanante(**acompanante.dict())
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
 
 # ---------- CREAR CONDUCTOR + FURGÓN ----------
-
-@router.post("/conductor-completo", response_model=schemas.UsuarioResponse)
+@router.post("/conductor-completo", response_model=schemas.ConductorCompletoResponse)
 def crear_conductor_completo(
+
     datos: schemas.ConductorCompletoCreate,
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
@@ -134,109 +147,31 @@ def crear_conductor_completo(
         id_usuario=nuevo_usuario.id_usuario,
         patente=datos.datos_conductor.patente,
         modelo_vehiculo=datos.datos_conductor.modelo_vehiculo,
+        casa=datos.datos_conductor.casa,
+        lat_casa=datos.datos_conductor.lat_casa,
+        long_casa=datos.datos_conductor.long_casa
     )
     db.add(nuevo_conductor)
     db.commit()
 
-    return nuevo_usuario
-#============== CONDUCTOR-ESTUDIANTE===========
-@router.get("/conductores-estudiantes", response_model=List[schemas.ConductorConEstudiantes])
-def listar_conductores_con_estudiantes(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    conductores = db.query(models.Conductor).all()
-    resultado = []
-
-    for conductor in conductores:
-        usuario = conductor.usuario
-        estudiantes = db.query(models.Estudiante).filter_by(id_conductor=conductor.id_conductor).all()
-
-        resultado.append(schemas.ConductorConEstudiantes(
-            id_usuario=usuario.id_usuario,
-            nombre=usuario.nombre,
-            email=usuario.email,
-            telefono=usuario.telefono,
-            patente=conductor.patente,
-            modelo_vehiculo=conductor.modelo_vehiculo,
-            estudiantes=estudiantes
-        ))
-
-    return resultado
+    return schemas.ConductorCompletoResponse(
+    usuario=schemas.UsuarioResponse(
+        id_usuario=nuevo_usuario.id_usuario,
+        nombre=nuevo_usuario.nombre,
+        email=nuevo_usuario.email,
+        telefono=nuevo_usuario.telefono,
+        tipo_usuario=nuevo_usuario.tipo_usuario
+    ),
+    datos_conductor=schemas.DatosConductorSchema(
+        patente=nuevo_conductor.patente,
+        modelo_vehiculo=nuevo_conductor.modelo_vehiculo,
+        casa=nuevo_conductor.casa,
+        lat_casa=nuevo_conductor.lat_casa,
+        long_casa=nuevo_conductor.long_casa
+    )
+)
 
 
-# ---------- ACOMPAÑANTE ----------
-
-@router.post("/acompanantes", response_model=schemas.AcompananteResponse)
-def crear_acompanante(
-    acompanante: schemas.AcompananteCreate,
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    nuevo = models.Acompanante(**acompanante.dict())
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-    return nuevo
-
-@router.get("/acompanantes", response_model=List[schemas.AcompananteResponse])
-def listar_acompanantes(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    return db.query(models.Acompanante).all()
-
-# ---------- GET EXTENDIDOS ----------
-
-@router.get("/apoderados-detalle", response_model=List[schemas.ApoderadoConEstudiantes])
-def obtener_apoderados_con_estudiantes(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    usuarios_apoderados = db.query(models.Usuario).filter_by(tipo_usuario="apoderado").all()
-    resultado = []
-
-    for usuario in usuarios_apoderados:
-        apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario.id_usuario).first()
-        if not apoderado:
-            continue
-
-        estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
-
-        resultado.append(schemas.ApoderadoConEstudiantes(
-            id_usuario=usuario.id_usuario,
-            nombre=usuario.nombre,
-            email=usuario.email,
-            telefono=usuario.telefono,
-            estudiantes=estudiantes
-            
-        ))
-
-    return resultado
-
-
-@router.get("/conductores", response_model=List[schemas.ConductorConEstudiantes])
-def obtener_conductores_con_acompanante(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    conductores = db.query(models.Conductor).join(models.Usuario).all()
-    resultado = []
-    for c in conductores:
-        usuario = c.usuario
-        acompanante = c.acompanante
-        resultado.append(schemas.ConductorConEstudiantes(
-            id_usuario=usuario.id_usuario,
-            nombre=usuario.nombre,
-            email=usuario.email,
-            telefono=usuario.telefono,
-            patente=c.patente,
-            modelo_vehiculo=c.modelo_vehiculo,
-            acompanante=acompanante
-        ))
-    return resultado
-
-# ---------- ASIGNACIONES ----------
 
 @router.post("/asignar-estudiante-conductor")
 def asignar_estudiante_a_conductor(
@@ -271,6 +206,7 @@ def asignar_acompanante_a_conductor(
     conductor.id_acompanante = id_acompanante
     db.commit()
     return {"mensaje": "Acompañante asignado correctamente"}
+
 
 # ---------- ELIMINACIONES ----------
 
@@ -310,98 +246,84 @@ def eliminar_acompanante(id_acompanante: int, db: Session = Depends(get_db), _: 
     db.commit()
     return {"mensaje": "Acompañante eliminado"}
 
-# ---------- EDICIONES ----------
+# ---------- GET -----------
 
-@router.put("/usuario/{id_usuario}", response_model=schemas.UsuarioResponse)
-def editar_usuario(
-    id_usuario: int,
-    cambios: schemas.UsuarioUpdate,
+@router.get("/acompanantes", response_model=List[schemas.AcompananteResponse])
+def listar_acompanantes(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    usuario = db.query(models.Usuario).filter_by(id_usuario=id_usuario).first()
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return db.query(models.Acompanante).all()
 
-    for attr, value in cambios.dict(exclude_unset=True).items():
-        if attr == "contrasena":
-            setattr(usuario, attr, hash_contrasena(value))
-        else:
-            setattr(usuario, attr, value)
-
-    db.commit()
-    db.refresh(usuario)
-    return usuario
-
-@router.put("/estudiante/{id_estudiante}", response_model=schemas.EstudianteResponse)
-def editar_estudiante(
-    id_estudiante: int,
-    cambios: schemas.EstudianteUpdate,
+@router.get("/conductores-estudiantes", response_model=List[schemas.ConductorConEstudiantes])
+def listar_conductores_con_estudiantes(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    estudiante = db.query(models.Estudiante).filter_by(id_estudiante=id_estudiante).first()
-    if not estudiante:
-        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
+    conductores = db.query(models.Conductor).all()
+    resultado = []
 
-    for attr, value in cambios.dict(exclude_unset=True).items():
-        setattr(estudiante, attr, value)
+    for conductor in conductores:
+        usuario = conductor.usuario
+        estudiantes = db.query(models.Estudiante).filter_by(id_conductor=conductor.id_conductor).all()
 
-    db.commit()
-    db.refresh(estudiante)
-    return estudiante
+        resultado.append(schemas.ConductorConEstudiantes(
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            patente=conductor.patente,
+            modelo_vehiculo=conductor.modelo_vehiculo,
+            estudiantes=estudiantes
+        ))
 
-@router.put("/acompanante/{id_acompanante}", response_model=schemas.AcompananteResponse)
-def editar_acompanante(
-    id_acompanante: int,
-    cambios: schemas.AcompananteUpdate,
+    return resultado
+@router.get("/apoderados-detalle", response_model=List[schemas.ApoderadoConEstudiantes])
+def obtener_apoderados_con_estudiantes(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    acompanante = db.query(models.Acompanante).filter_by(id_acompanante=id_acompanante).first()
-    if not acompanante:
-        raise HTTPException(status_code=404, detail="Acompañante no encontrado")
+    usuarios_apoderados = db.query(models.Usuario).filter_by(tipo_usuario="apoderado").all()
+    resultado = []
 
-    for attr, value in cambios.dict(exclude_unset=True).items():
-        setattr(acompanante, attr, value)
+    for usuario in usuarios_apoderados:
+        apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario.id_usuario).first()
+        if not apoderado:
+            continue
 
-    db.commit()
-    db.refresh(acompanante)
-    return acompanante
+        estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
 
+        resultado.append(schemas.ApoderadoConEstudiantes(
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            estudiantes=estudiantes
+            
+        ))
 
+    return resultado
 
-@router.get("/conductor/{id_usuario}", response_model=schemas.ConductorConEstudiantes)
-def obtener_conductor_detalle(
-    id_usuario: int,
+@router.get("/conductores", response_model=List[schemas.ConductorConEstudiantes])
+def obtener_conductores_con_acompanante(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    usuario = db.query(models.Usuario).filter_by(id_usuario=id_usuario, tipo_usuario="conductor").first()
-    if not usuario or not usuario.conductor:
-        raise HTTPException(status_code=404, detail="Conductor no encontrado")
-
-    conductor = usuario.conductor
-    acompanante = conductor.acompanante
-
-    # Obtener estudiantes a partir de las rutas fijas
-    estudiantes = []
-    for ruta in conductor.rutas_fijas:
-        for parada in ruta.paradas:
-            if parada.estudiante:
-                estudiantes.append(parada.estudiante)
-
-    return schemas.ConductorConEstudiantes(
-        id_usuario=usuario.id_usuario,
-        nombre=usuario.nombre,
-        email=usuario.email,
-        telefono=usuario.telefono,
-        patente=conductor.patente,
-        modelo_vehiculo=conductor.modelo_vehiculo,
-        acompanante=acompanante,
-        estudiantes=estudiantes
-    )
-
+    conductores = db.query(models.Conductor).join(models.Usuario).all()
+    resultado = []
+    for c in conductores:
+        usuario = c.usuario
+        acompanante = c.acompanante
+        resultado.append(schemas.ConductorConEstudiantes(
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            patente=c.patente,
+            modelo_vehiculo=c.modelo_vehiculo,
+            acompanante=acompanante
+        ))
+    return resultado
 
 
 
@@ -466,10 +388,7 @@ def listar_todos_los_usuarios(
         resultado.append(item)
 
     return resultado
-
-
-
-@router.get("/apoderado/{id_apoderado}", response_model=schemas.ApoderadoResponse)
+@router.get("/apoderado/{id_apoderado}", response_model=schemas.ApoderadoConEstudiantes)
 def obtener_apoderado_por_id(
     id_apoderado: int,
     db: Session = Depends(get_db),
@@ -478,7 +397,90 @@ def obtener_apoderado_por_id(
     apoderado = db.query(models.Apoderado).filter_by(id_apoderado=id_apoderado).first()
     if not apoderado:
         raise HTTPException(status_code=404, detail="Apoderado no encontrado")
-    return apoderado
+
+    usuario = apoderado.usuario  # Relación uno a uno desde Apoderado a Usuario
+
+    estudiantes = [
+        schemas.EstudianteSimple(
+            id_estudiante=e.id_estudiante,
+            nombre=e.nombre,
+            edad=e.edad,
+            curso=e.curso,
+            casa=e.casa,
+            lat_casa=e.lat_casa,
+            long_casa=e.long_casa,
+            colegio=e.colegio,
+            lat_colegio=e.lat_colegio,
+            long_colegio=e.long_colegio
+        )
+        for e in apoderado.estudiantes
+    ]
+
+    return schemas.ApoderadoConEstudiantes(
+        id_usuario=usuario.id_usuario,
+        nombre=usuario.nombre,
+        email=usuario.email,
+        telefono=usuario.telefono,
+        estudiantes=estudiantes
+    )
+
+
+@router.put("/usuario/{id_usuario}", response_model=schemas.UsuarioResponse)
+def editar_usuario(
+    id_usuario: int,
+    cambios: schemas.UsuarioUpdate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    usuario = db.query(models.Usuario).filter_by(id_usuario=id_usuario).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    for attr, value in cambios.dict(exclude_unset=True).items():
+        if attr == "contrasena":
+            setattr(usuario, attr, hash_contrasena(value))
+        else:
+            setattr(usuario, attr, value)
+
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+@router.put("/estudiante/{id_estudiante}", response_model=schemas.EstudianteResponse)
+def editar_estudiante(
+    id_estudiante: int,
+    cambios: schemas.EstudianteUpdate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    estudiante = db.query(models.Estudiante).filter_by(id_estudiante=id_estudiante).first()
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
+
+    for attr, value in cambios.dict(exclude_unset=True).items():
+        setattr(estudiante, attr, value)
+
+    db.commit()
+    db.refresh(estudiante)
+    return estudiante
+
+@router.put("/acompanante/{id_acompanante}", response_model=schemas.AcompananteResponse)
+def editar_acompanante(
+    id_acompanante: int,
+    cambios: schemas.AcompananteUpdate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    acompanante = db.query(models.Acompanante).filter_by(id_acompanante=id_acompanante).first()
+    if not acompanante:
+        raise HTTPException(status_code=404, detail="Acompañante no encontrado")
+
+    for attr, value in cambios.dict(exclude_unset=True).items():
+        setattr(acompanante, attr, value)
+
+    db.commit()
+    db.refresh(acompanante)
+    return acompanante
 
 
 @router.put("/apoderado-estudiante/{id_apoderado}", response_model=schemas.ApoderadoYEstudianteResponse)
@@ -537,9 +539,6 @@ def editar_apoderado_con_estudiante(
         ),
         estudiante=schemas.EstudianteResponse.from_orm(estudiante)
     )
-
-
-
 @router.put("/conductor-completo/{id_conductor}", response_model=schemas.ConductorCompletoResponse)
 def editar_conductor_completo(
     id_conductor: int,

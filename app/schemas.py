@@ -26,8 +26,17 @@ class UsuarioCreate(BaseModel):
     email: EmailStr
     telefono: str
     contrasena: str 
+    
 
 class UsuarioUpdate(BaseModel):
+    nombre: Optional[str] 
+    email: Optional[EmailStr] 
+    telefono: Optional[str] 
+    
+    class Config:
+        from_attributes = True
+
+class UsuarioUpdateconductor(BaseModel):
     nombre: Optional[str] 
     email: Optional[EmailStr] 
     telefono: Optional[str] 
@@ -92,13 +101,16 @@ class EstudianteSimple(BaseModel):
     id_estudiante: int
     nombre: str
     edad: int
-    curso: Optional[str]
-    colegio: Optional[str]
-    casa: Optional[str]
-    lat_casa: Optional[float]
-    long_casa: Optional[float]
-    nombre_apoderado_secundario: Optional[str]
-    telefono_apoderado_secundario: Optional[str]
+    colegio: Optional[str] = None
+    curso: Optional[str] = None
+    colegio: Optional[str] = None
+    casa: Optional[str] = None
+    lat_casa: Optional[float] = None
+    long_casa: Optional[float] = None
+    lat_colegio: Optional[float]= None
+    long_colegio: Optional[float]= None
+    nombre_apoderado_secundario: Optional[str] = None
+    telefono_apoderado_secundario: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -138,7 +150,7 @@ class ApoderadoYEstudiantecreate(BaseModel):
     estudiante: EstudianteCreate
     
 class ApoderadoYEstudiante(BaseModel):
-    apoderado: UsuarioUpdate
+    apoderado: UsuarioCreate
     estudiante: EstudianteUpdate
 
 class ApoderadoYEstudianteResponse(BaseModel):
@@ -150,14 +162,14 @@ class ApoderadoConEstudiantes(BaseModel):
     nombre: str
     email: str
     telefono: str
-    estudiantes: List[EstudianteSimple] = []
+    estudiantes: List[EstudianteSimple]
 
     class Config:
         from_attributes = True
         
 class ApoderadoResponse(BaseModel):
     id_apoderado: int
-    usuario: UsuarioBase
+    usuario: ApoderadoConEstudiantes
 
     class Config:
         from_attributes = True
@@ -191,6 +203,10 @@ class AcompananteResponse(BaseModel):
 class ConductorCreateDatos(BaseModel):
     patente: str
     modelo_vehiculo: str
+    casa: str
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
+    
     class Config:
         from_attributes = True 
         
@@ -200,6 +216,7 @@ class DatosConductorSchema(BaseModel):
     casa: Optional[str]
     lat_casa: Optional[float]
     long_casa: Optional[float]
+    
     class Config:
         from_attributes = True
         
@@ -233,6 +250,9 @@ class ConductorConEstudiantes(BaseModel):
 class ConductorUpdateDatos(BaseModel):
     patente: Optional[str]
     modelo_vehiculo: Optional[str]
+    casa: Optional[str]
+    lat_casa: Optional[float]
+    long_casa: Optional[float]
 
 class ConductorDetalle(BaseModel):
     usuario: UsuarioBase
@@ -242,10 +262,10 @@ class ConductorDetalle(BaseModel):
         from_attributes = True
 class ConductorCompletoCreate(BaseModel):
     usuario: UsuarioCreate
-    datos_conductor: ConductorCreateDatos
+    datos_conductor: DatosConductorSchema
 
 class ConductorCompletoupdate(BaseModel):
-    usuario: UsuarioUpdate
+    usuario: UsuarioUpdateconductor
     datos_conductor: ConductorUpdateDatos
 
 class ConductorCompletoResponse(BaseModel):

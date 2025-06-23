@@ -34,7 +34,10 @@ def obtener_mi_info_conductor(
 
     datos_conductor_schema = schemas.ConductorCreateDatos(
         patente=conductor.patente,
-        modelo_vehiculo=conductor.modelo_vehiculo
+        modelo_vehiculo=conductor.modelo_vehiculo,
+        casa= conductor.casa,
+        lat_casa=conductor.lat_casa,
+        long_casa=conductor.long_casa
     )
     
     return schemas.ConductorCompleto(
@@ -93,40 +96,6 @@ def listar_estudiantes_con_asistencia_hoy(
     return resultado
 
 
-@router.get("/asistencias-hoy", response_model=List[schemas.EstudianteConAsistencias])
-def obtener_estudiantes_presentes_hoy(
-    usuario_actual: models.Usuario = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    if usuario_actual.tipo_usuario != "conductor" :
-        raise HTTPException(status_code=403, detail="Acceso restringido a conductores")
-
-    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
-    if not conductor:
-        raise HTTPException(status_code=404, detail="Conductor no encontrado")
-
-    estudiantes = db.query(models.Estudiante).filter_by(id_conductor=conductor.id_conductor).all()
-
-    estudiantes_presentes = []
-    hoy = date.today()
-
-    for est in estudiantes:
-        asistencia = db.query(models.Asistencia).filter_by(
-            id_estudiante=est.id_estudiante,
-            fecha=hoy,
-            asiste=True
-        ).first()
-
-        if asistencia:
-            estudiantes_presentes.append(schemas.EstudianteConAsistencias(
-                id_estudiante=est.id_estudiante,
-                nombre=est.nombre,
-                curso=est.curso,
-                colegio=est.colegio,
-                asistencias=[schemas.AsistenciaResponse.from_orm(asistencia)]
-            ))
-
-    return estudiantes_presentes
 
 @router.post("/ruta-dia/generar", response_model=schemas.RutaResponse)
 def generar_ruta_dia_conductor(
