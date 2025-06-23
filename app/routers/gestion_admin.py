@@ -570,19 +570,19 @@ def editar_conductor_completo(
         usuario.email = datos.usuario.email
     if datos.usuario.telefono:
         usuario.telefono = datos.usuario.telefono
-    if datos.usuario.casa:
-        conductor.casa = datos.usuario.casa
-    if datos.usuario.lat_casa:
-        conductor.lat_casa = datos.usuario.lat_casa
-    if datos.usuario.long_casa:
-        conductor.long_casa = datos.usuario.long_casa
+
 
     # Actualizar datos del conductor
     if datos.datos_conductor.patente:
         conductor.patente = datos.datos_conductor.patente
     if datos.datos_conductor.modelo_vehiculo:
         conductor.modelo_vehiculo = datos.datos_conductor.modelo_vehiculo
-
+    if datos.datos_conductor.casa:
+        conductor.casa = datos.datos_conductor.casa
+    if datos.datos_conductor.lat_casa:
+        conductor.lat_casa = datos.datos_conductor.lat_casa
+    if datos.datos_conductor.long_casa:
+        conductor.long_casa = datos.datos_conductor.long_casa
 
     db.commit()
     db.refresh(usuario)

@@ -265,7 +265,7 @@ class ConductorCompletoCreate(BaseModel):
     datos_conductor: DatosConductorSchema
 
 class ConductorCompletoupdate(BaseModel):
-    usuario: UsuarioUpdateconductor
+    usuario: UsuarioUpdate
     datos_conductor: ConductorUpdateDatos
 
 class ConductorCompletoResponse(BaseModel):
