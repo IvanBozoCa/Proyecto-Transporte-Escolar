@@ -349,36 +349,7 @@ def editar_acompanante(
     db.refresh(acompanante)
     return acompanante
 
-@router.put("/conductor-completo/{id_conductor}", response_model=schemas.UsuarioResponse)
-def editar_conductor_completo(
-    id_conductor: int,
-    datos: schemas.ConductorCompletoCreate,
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    conductor = db.query(models.Conductor).filter_by(id_conductor=id_conductor).first()
-    if not conductor:
-        raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    usuario = db.query(models.Usuario).filter_by(id_usuario=conductor.id_usuario).first()
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
-
-    # Actualizar datos del usuario
-    usuario.nombre = datos.usuario.nombre
-    usuario.email = datos.usuario.email
-    usuario.telefono = datos.usuario.telefono
-    if datos.usuario.contrasena:
-        usuario.contrasena = hash_contrasena(datos.usuario.contrasena)
-
-    # Actualizar datos del conductor
-    conductor.patente = datos.datos_conductor.patente
-    conductor.modelo_vehiculo = datos.datos_conductor.modelo_vehiculo
-
-    db.commit()
-    db.refresh(usuario)
-
-    return usuario
 
 @router.get("/conductor/{id_usuario}", response_model=schemas.ConductorConEstudiantes)
 def obtener_conductor_detalle(
@@ -412,7 +383,7 @@ def obtener_conductor_detalle(
     )
 
 
-@router.get("/listado-general", response_model=List[schemas.FilaListadoGeneral])
+@router.get("/apoderado-estudiante-conductor", response_model=List[schemas.FilaListadoGeneral])
 def obtener_listado_general(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
@@ -530,12 +501,18 @@ def editar_apoderado_con_estudiante(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
 
+    # Verificar si el nuevo email ya está en uso por otro usuario
+    email_existente = db.query(models.Usuario).filter(
+        models.Usuario.email == datos.apoderado.email,
+        models.Usuario.id_usuario != usuario.id_usuario  # Excluir el propio usuario
+    ).first()
+    if email_existente:
+        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
+
     # Actualizar datos del usuario
     usuario.nombre = datos.apoderado.nombre
     usuario.email = datos.apoderado.email
     usuario.telefono = datos.apoderado.telefono
-    if datos.apoderado.contrasena:
-        usuario.contrasena = hash_contrasena(datos.apoderado.contrasena)
 
     # Actualizar estudiante
     estudiante = db.query(models.Estudiante).filter_by(id_apoderado=id_apoderado).first()
@@ -547,16 +524,57 @@ def editar_apoderado_con_estudiante(
         estudiante.longitud = datos.estudiante.longitud
         estudiante.nombre_apoderado_secundario = datos.estudiante.nombre_apoderado_secundario
         estudiante.telefono_apoderado_secundario = datos.estudiante.telefono_apoderado_secundario
+        estudiante.curso = datos.estudiante.curso
+        estudiante.colegio = datos.estudiante.colegio
 
     db.commit()
-    db.refresh(apoderado)
+    db.refresh(usuario)
     db.refresh(estudiante)
 
-    return {
-        "id_apoderado": apoderado.id_apoderado,
-        "id_usuario": usuario.id_usuario,
-        "nombre": usuario.nombre,
-        "correo": usuario.email,
-        "telefono": usuario.telefono,
-        "estudiante": estudiante
-    }
+    return schemas.ApoderadoYEstudianteResponse(
+        apoderado=schemas.UsuarioResponse(
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            tipo_usuario=usuario.tipo_usuario
+        ),
+        estudiante=schemas.EstudianteResponse.from_orm(estudiante)
+    )
+
+
+
+@router.put("/conductor-completo/{id_conductor}", response_model=schemas.UsuarioResponse)
+def editar_conductor_completo(
+    id_conductor: int,
+    datos: schemas.ConductorCompletoCreate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    conductor = db.query(models.Conductor).filter_by(id_conductor=id_conductor).first()
+    if not conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado")
+
+    usuario = db.query(models.Usuario).filter_by(id_usuario=conductor.id_usuario).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
+    
+    # Verificar si el nuevo email ya está en uso por otro usuario
+    email_existente = db.query(models.Usuario).filter(
+        models.Usuario.email == datos.usuario.email,
+        models.Usuario.id_usuario != usuario.id_usuario  # Excluir el propio usuario
+    ).first()
+    if email_existente:
+        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
+    # Actualizar datos del usuario
+    usuario.nombre = datos.usuario.nombre
+    usuario.email = datos.usuario.email
+    usuario.telefono = datos.usuario.telefono
+    # Actualizar datos del conductor
+    conductor.patente = datos.datos_conductor.patente
+    conductor.modelo_vehiculo = datos.datos_conductor.modelo_vehiculo
+
+    db.commit()
+    db.refresh(usuario)
+
+    return usuario
