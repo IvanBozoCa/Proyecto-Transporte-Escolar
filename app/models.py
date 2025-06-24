@@ -156,7 +156,7 @@ class Parada(Base):
 class Asistencia(Base):
     __tablename__ = "asistencias"
 
-    id_asistencia = Column(Integer, primary_key=True, index=True)
+    id_asistencia = Column(Integer, primary_key=True, index=True,autoincrement=True)
     id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"))
     fecha = Column(Date, nullable=False)
     asiste = Column(Boolean, nullable=False)

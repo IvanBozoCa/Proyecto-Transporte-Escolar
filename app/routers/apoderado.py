@@ -12,14 +12,12 @@ router = APIRouter(
     tags=["Apoderado"]
 )
 
-@router.post("/asistencia", response_model=dict)
+@router.post("/asistencia", response_model=schemas.AsistenciaResponse)
 def registrar_asistencia(
-    id_estudiante: int,
     asistencia: schemas.AsistenciaCreate,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
-    # Solo apoderados pueden registrar asistencia
     if usuario_actual.tipo_usuario != "apoderado":
         raise HTTPException(status_code=403, detail="No autorizado")
 
@@ -27,21 +25,32 @@ def registrar_asistencia(
     if not estudiante or estudiante.id_apoderado != usuario_actual.apoderado.id_apoderado:
         raise HTTPException(status_code=403, detail="No autorizado para este estudiante")
 
-    registro = db.query(models.Asistencia).filter_by(
+    hoy = date.today()
+
+    # Buscar si ya existe un registro de asistencia para hoy
+    registro_existente = db.query(models.Asistencia).filter_by(
         id_estudiante=asistencia.id_estudiante,
+        fecha=hoy
     ).first()
 
-    if registro:
-        registro.asiste = asistencia.asiste
-    else:
-        nuevo = models.Asistencia(
-            id_estudiante=asistencia.id_estudiante,
-            asiste=asistencia.asiste
-        )
-        db.add(nuevo)
+    if registro_existente:
+        registro_existente.asiste = asistencia.asiste
+        db.commit()
+        db.refresh(registro_existente)
+        return registro_existente
 
+    # Si no existe, crearlo
+    nuevo = models.Asistencia(
+        id_estudiante=asistencia.id_estudiante,
+        fecha=hoy,
+        asiste=asistencia.asiste
+    )
+    db.add(nuevo)
     db.commit()
-    return {"mensaje": "Asistencia registrada correctamente"}
+    db.refresh(nuevo)
+    return nuevo
+
+
 
 
 @router.get("/asistencia/hoy", response_model=List[schemas.EstudianteBasico])

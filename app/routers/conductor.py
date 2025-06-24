@@ -96,72 +96,6 @@ def listar_estudiantes_con_asistencia_hoy(
 
 
 
-@router.post("/ruta-dia/generar", response_model=schemas.RutaResponse)
-def generar_ruta_dia_conductor(
-    db: Session = Depends(get_db),
-    usuario_actual: models.Usuario = Depends(get_current_user)
-):
-    if usuario_actual.tipo_usuario != "conductor" :
-        raise HTTPException(status_code=403, detail="Acceso restringido a conductores")
-
-    hoy = date.today()
-
-    # Obtener el conductor asociado al usuario actual
-    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
-    if not conductor:
-        raise HTTPException(status_code=404, detail="Conductor no encontrado")
-
-    # Verificar si ya existe una ruta para hoy
-    ruta_existente = db.query(models.Ruta).filter_by(id_conductor=conductor.id_conductor, fecha=hoy).first()
-    if ruta_existente:
-        raise HTTPException(status_code=400, detail="Ya existe una ruta del día para este conductor.")
-
-    # Buscar ruta fija del conductor
-    ruta_fija = db.query(models.RutaFija).filter_by(id_conductor=conductor.id_conductor).first()
-    if not ruta_fija:
-        raise HTTPException(status_code=404, detail="No hay una ruta fija asignada a este conductor.")
-
-    # Obtener IDs de estudiantes con asistencia positiva hoy
-    asistencias_hoy = db.query(models.Asistencia).filter_by(fecha=hoy, asiste=True).all()
-    ids_presentes = {asistencia.id_estudiante for asistencia in asistencias_hoy}
-
-    # Filtrar paradas de la ruta fija cuyos estudiantes están presentes
-    paradas_presentes = [
-        parada for parada in ruta_fija.paradas if parada.id_estudiante in ids_presentes
-    ]
-
-    if not paradas_presentes:
-        raise HTTPException(status_code=400, detail="No hay estudiantes presentes para hoy.")
-
-    # Crear la ruta del día
-    nueva_ruta = models.Ruta(
-        id_conductor=conductor.id_conductor,
-        fecha=hoy,
-        estado="activa",
-        hora_inicio=datetime.now().time()
-    )
-    db.add(nueva_ruta)
-    db.commit()
-    db.refresh(nueva_ruta)
-
-    # Agregar paradas a la nueva ruta
-    for parada_fija in paradas_presentes:
-        estudiante = parada_fija.estudiante
-        nueva_parada = models.Parada(
-            id_ruta=nueva_ruta.id_ruta,
-            id_estudiante=estudiante.id_estudiante,
-            orden=parada_fija.orden,
-            latitud=estudiante.latitud,
-            longitud=estudiante.longitud
-        )
-        db.add(nueva_parada)
-
-    db.commit()
-    db.refresh(nueva_ruta)
-
-    return nueva_ruta
-
-
 @router.get("/ruta-dia/conductor", response_model=schemas.RutaConParadasResponse)
 def ver_ultima_ruta_del_dia_del_conductor(
     db: Session = Depends(get_db),
@@ -198,7 +132,7 @@ def generar_ruta_dia(
     if usuario_actual.tipo_usuario != "conductor":
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    conductor = usuario_actual.conductor
+    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no registrado")
 
@@ -217,23 +151,19 @@ def generar_ruta_dia(
         raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
 
     # Obtener estudiantes con asistencia registrada para hoy
-    estudiantes_presentes = (
-        db.query(models.Estudiante)
-        .join(models.Asistencia)
-        .filter(
-            models.Asistencia.fecha == date.today(),
-            models.Asistencia.asiste == True,
-            models.Estudiante.id_estudiante == models.Asistencia.id_estudiante
-        )
-        .all()
-    )
+    asistencias_hoy = db.query(models.Asistencia).filter_by(
+        fecha=date.today(),
+        asiste=True
+    ).all()
 
-    # Generar paradas solo para los estudiantes que están en la ruta fija y presentes hoy
+    ids_presentes = {a.id_estudiante for a in asistencias_hoy}
+
+    # Generar paradas solo para los estudiantes que están en la ruta fija y están presentes hoy
     paradas_creadas = []
     orden = 1
     for parada_fija in sorted(ruta_fija.paradas, key=lambda x: x.orden):
         estudiante = parada_fija.estudiante
-        if estudiante in estudiantes_presentes:
+        if estudiante.id_estudiante in ids_presentes:
             parada = models.Parada(
                 id_estudiante=estudiante.id_estudiante,
                 orden=orden,
@@ -253,32 +183,41 @@ def generar_ruta_dia(
         id_conductor=conductor.id_conductor,
         fecha=date.today(),
         estado="activa",
+        hora_inicio=datetime.now().time(),
         paradas=paradas_creadas
     )
 
     db.add(nueva_ruta)
     db.commit()
     db.refresh(nueva_ruta)
-    
+
     return nueva_ruta
 
-@router.put("/finalizar-ruta/{id_ruta}")
-def finalizar_ruta(
-    id_ruta: int,
+
+@router.put("/finalizar-ruta-dia")
+def finalizar_ruta_dia(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
     if usuario_actual.tipo_usuario != "conductor":
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    ruta = db.query(models.Ruta).filter_by(id_ruta=id_ruta, id_conductor=usuario_actual.conductor.id_conductor).first()
-    if not ruta:
-        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+    # Obtener al conductor desde el usuario
+    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    if ruta.estado != "activa":
-        raise HTTPException(status_code=400, detail="La ruta ya está finalizada")
+    # Buscar la ruta activa actual
+    ruta = db.query(models.Ruta).filter_by(
+        id_conductor=conductor.id_conductor,
+        estado="activa"
+    ).first()
+
+    if not ruta:
+        raise HTTPException(status_code=404, detail="No hay una ruta activa para finalizar")
 
     ruta.estado = "finalizada"
+    ruta.hora_fin = datetime.now().time()
     db.commit()
 
     return {"mensaje": "Ruta finalizada exitosamente"}
