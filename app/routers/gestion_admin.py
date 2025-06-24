@@ -248,6 +248,36 @@ def eliminar_acompanante(id_acompanante: int, db: Session = Depends(get_db), _: 
 
 # ---------- GET -----------
 
+@router.get("/admin/conductor/{id_usuario}", response_model=schemas.ConductorCompletoResponse)
+def obtener_conductor_completo(
+    id_usuario: int,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    usuario = db.query(models.Usuario).filter_by(id_usuario=id_usuario, tipo_usuario="conductor").first()
+    if not usuario or not usuario.conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado")
+
+    conductor = usuario.conductor
+
+    return schemas.ConductorCompletoResponse(
+        usuario=schemas.UsuarioResponse(
+            id_usuario=usuario.id_usuario,
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            tipo_usuario=usuario.tipo_usuario
+        ),
+        datos_conductor=schemas.DatosConductorSchema(
+            patente=conductor.patente,
+            modelo_vehiculo=conductor.modelo_vehiculo,
+            casa=conductor.casa,
+            lat_casa=conductor.lat_casa,
+            long_casa=conductor.long_casa
+        )
+    )
+
+
 @router.get("/acompanantes", response_model=List[schemas.AcompananteResponse])
 def listar_acompanantes(
     db: Session = Depends(get_db),

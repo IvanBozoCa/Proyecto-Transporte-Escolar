@@ -45,54 +45,6 @@ def obtener_rutas_fijas_conductor(
     rutas = db.query(models.RutaFija).filter_by(id_conductor=id_conductor).all()
     return rutas
 
-'''
-@router.put("/{id_ruta_fija}", response_model=schemas.RutaFijaResponse)
-def actualizar_ruta_fija(
-    id_ruta_fija: int,
-    datos: schemas.RutaFijaUpdate,
-    db: Session = Depends(get_db)
-):
-    ruta = db.query(models.RutaFija).filter(models.RutaFija.id_ruta_fija == id_ruta_fija).first()
-    if not ruta:
-        raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
-
-    # Actualizar nombre y descripción si se proporcionan
-    if datos.nombre is not None:
-        ruta.nombre = datos.nombre
-    if datos.descripcion is not None:
-        ruta.descripcion = datos.descripcion
-
-    # Si se proporciona una lista de paradas actualizamos
-    if datos.paradas is not None:
-        paradas_existentes = {p.id_estudiante: p for p in ruta.paradas}
-        nuevos_ids = set()
-
-        for parada in datos.paradas:
-            nuevos_ids.add(parada.id_estudiante)
-            if parada.id_estudiante in paradas_existentes:
-                # Actualizar orden si cambió
-                parada_existente = paradas_existentes[parada.id_estudiante]
-                parada_existente.orden = parada.orden
-            else:
-                # Agregar nueva parada
-                nueva_parada = models.ParadaRutaFija(
-                    id_ruta_fija=id_ruta_fija,
-                    id_estudiante=parada.id_estudiante,
-                    orden=parada.orden
-                )
-                db.add(nueva_parada)
-
-        # Eliminar paradas que ya no están
-        for estudiante_id in list(paradas_existentes):
-            if estudiante_id not in nuevos_ids:
-                db.delete(paradas_existentes[estudiante_id])
-
-    db.commit()
-    db.refresh(ruta)
-    return ruta
-    
-
-'''
 
 @router.put("/rutas-fijas/{id_ruta_fija}", response_model=schemas.RutaFijaResponse)
 def editar_ruta_fija(
@@ -237,8 +189,8 @@ def generar_ruta_dia(
             id_ruta=nueva_ruta.id_ruta,
             id_estudiante=estudiante.id_estudiante,
             orden=parada.orden,
-            latitud=estudiante.latitud,
-            longitud=estudiante.longitud
+            latitud=estudiante.lat_casa,
+            longitud=estudiante.long_casa
         )
         db.add(nueva_parada)
         estudiantes_respuesta.append(estudiante)
