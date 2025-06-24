@@ -73,6 +73,7 @@ def crear_apoderado_con_estudiante(
         edad=datos.estudiante.edad,
         id_apoderado=nuevo_apoderado.id_apoderado,
         colegio=datos.estudiante.colegio,
+        casa=datos.estudiante.casa,
         curso=datos.estudiante.curso,
         lat_casa=datos.estudiante.lat_casa,
         long_casa=datos.estudiante.long_casa,

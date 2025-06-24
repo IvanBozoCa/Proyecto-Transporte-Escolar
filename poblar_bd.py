@@ -77,93 +77,13 @@ admin2 = models.Usuario(
     tipo_usuario="administrador",
     contrasena=hash_contrasena("admin123")
 )
-db.add_all([admin1, admin2])
+admin3 = models.Usuario(
+    nombre="Ivan Bozo",
+    email="ivan.bozo@example.com",
+    telefono="222222222",
+    tipo_usuario="administrador",
+    contrasena=hash_contrasena("admin123")
+)
+db.add_all([admin1, admin2,admin3])
 db.commit()
 
-# Crear conductores
-conductores = []
-for _ in range(2):
-    usuario = models.Usuario(
-        nombre=fake.name(),
-        email=fake.unique.email(),
-        telefono=fake.phone_number(),
-        tipo_usuario="conductor",
-        contrasena=hash_contrasena("conductor123")
-    )
-    db.add(usuario)
-    db.flush()
-
-    conductor = models.Conductor(
-        id_usuario=usuario.id_usuario,
-        patente=fake.license_plate(),
-        modelo_vehiculo=fake.word().capitalize(),
-        casa= "Av. Circunvalación Sur 456",
-        lat_casa=-34.364500,
-        long_casa=-71.652300
-
-    )
-    db.add(conductor)
-    conductores.append(conductor)
-    
-db.commit()
-
-# Lista de colegios y cursos ficticios
-colegios_falsos = [
-    "Colegio Bicentenario Santa María",
-    "Liceo Técnico Profesional Andes",
-    "Escuela República de Chile",
-    "Colegio San Martín",
-    "Instituto La Esperanza"
-]
-cursos_falsos = [
-    "1° Básico", "2° Básico", "3° Básico", "4° Básico",
-    "5° Básico", "6° Básico", "7° Básico", "8° Básico",
-    "1° Medio", "2° Medio", "3° Medio", "4° Medio"
-]
-
-# Crear apoderados y estudiantes
-for _ in range(10):
-    usuario = models.Usuario(
-        nombre=fake.name(),
-        email=fake.unique.email(),
-        telefono=fake.phone_number(),
-        tipo_usuario="apoderado",
-        contrasena=hash_contrasena("apoderado123")
-    )
-    db.add(usuario)
-    db.flush()
-
-    apoderado = models.Apoderado(
-        id_usuario=usuario.id_usuario
-    )
-    db.add(apoderado)
-    db.flush()
-
-    estudiante = models.Estudiante(
-        nombre=fake.first_name(),
-        edad=random.randint(6, 17),
-        casa=fake.street_address(),
-        lat_casa=float(fake.latitude()),
-        long_casa=float(fake.longitude()),
-        colegio=random.choice(colegios_falsos),
-        lat_colegio=float(fake.latitude()),
-        long_colegio=float(fake.longitude()),
-        curso=random.choice(cursos_falsos),
-        activo=True,
-        nombre_apoderado_secundario=fake.name(),
-        telefono_apoderado_secundario=fake.phone_number(),
-        id_apoderado=apoderado.id_apoderado,
-        id_conductor=random.choice(conductores).id_conductor if conductores else None
-    )
-    db.add(estudiante)
-    db.flush()
-
-    asistencia = models.Asistencia(
-        id_estudiante=estudiante.id_estudiante,
-        fecha=date.today(),
-        asiste=True
-    )
-    db.add(asistencia)
-db.commit()
-
-print("Base de datos poblada exitosamente.")
