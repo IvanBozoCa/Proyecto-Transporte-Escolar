@@ -11,6 +11,32 @@ router = APIRouter(
     prefix="/apoderado",
     tags=["Apoderado"]
 )
+@router.get("/perfil", response_model=schemas.ApoderadoResponse)
+def obtener_mi_perfil_completo(
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "apoderado":
+        raise HTTPException(status_code=403, detail="Solo los apoderados pueden acceder a este perfil")
+
+    apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not apoderado:
+        raise HTTPException(status_code=404, detail="Apoderado no encontrado")
+
+    estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
+
+    return schemas.ApoderadoResponse(
+        id_apoderado=apoderado.id_apoderado,
+        usuario=schemas.ApoderadoConEstudiantes(
+            id_usuario=usuario_actual.id_usuario,
+            nombre=usuario_actual.nombre,
+            email=usuario_actual.email,
+            telefono=usuario_actual.telefono,
+            estudiantes=[
+                schemas.EstudianteSimple.from_orm(est) for est in estudiantes
+            ]
+        )
+    )
 
 @router.post("/asistencia", response_model=schemas.AsistenciaResponse)
 def registrar_asistencia(
@@ -50,17 +76,3 @@ def registrar_asistencia(
     db.refresh(nuevo)
     return nuevo
 
-
-
-
-@router.get("/asistencia/hoy", response_model=List[schemas.EstudianteBasico])
-def estudiantes_presentes_hoy(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(get_current_user)
-):
-    hoy = date.today()
-
-    asistencias = db.query(models.Asistencia).filter_by(fecha=hoy, asiste=True).all()
-    estudiantes = [asistencia.estudiante for asistencia in asistencias]
-
-    return estudiantes

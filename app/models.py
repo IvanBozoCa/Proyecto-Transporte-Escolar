@@ -191,6 +191,7 @@ class RutaFija(Base):
     __tablename__ = "rutas_fijas"
     id_ruta_fija = Column(Integer, primary_key=True)
     id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"))
+    descripcion = Column(String, nullable=False)
     nombre = Column(String, nullable=False)
 
     conductor = relationship("Conductor", back_populates="rutas_fijas")
@@ -202,6 +203,8 @@ class ParadaRutaFija(Base):
     id_ruta_fija = Column(Integer, ForeignKey("rutas_fijas.id_ruta_fija"))
     id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"))
     orden = Column(Integer)
-
+    es_destino_final = Column(Boolean, default=False)
     ruta = relationship("RutaFija", back_populates="paradas")
     estudiante = relationship("Estudiante")
+    latitud = Column(Float)
+    longitud = Column(Float)

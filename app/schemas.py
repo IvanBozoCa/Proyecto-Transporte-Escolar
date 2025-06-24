@@ -503,42 +503,94 @@ class EstudianteBasico(BaseModel):
     }
 
 class ParadaRutaFijaCreate(BaseModel):
-    id_estudiante: int
+    id_estudiante: Optional[int] = None  
     orden: int
+    es_destino_final: Optional[bool] = False
 
 class ParadaRutaFijaResponse(BaseModel):
     id_parada_ruta_fija: int
     orden: int
-    estudiante: EstudianteBasico
-
+    estudiante: Optional[EstudianteBasico] = None
+    es_destino_final: Optional[bool] = False
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    
     model_config = {
         "from_attributes": True
     }
 
 
+class ParadaEstudianteRutaFijaCreate(BaseModel):
+    id_estudiante: int
+    orden: int
+
+class ParadaFinalRutaFijaCreate(BaseModel):
+    latitud: float
+    longitud: float
+    orden: Optional[int] = None
+    
 class RutaFijaCreate(BaseModel):
     id_conductor: int
     nombre: str
-    descripcion: Optional[str] = None
-    paradas: List[ParadaRutaFijaCreate]
+    descripcion: str
+    paradas_estudiantes: List[ParadaEstudianteRutaFijaCreate]
+    parada_final: Optional[ParadaFinalRutaFijaCreate] = None
 
-class RutaFijaResponse(BaseModel):
-    id_ruta_fija: int
-    nombre: str
-    id_conductor: int
-    paradas: List[ParadaRutaFijaResponse]
+
+
+
+class ParadaRutaDiaResponse(BaseModel):
+    id_parada: int
+    orden: int
+    recogido: bool
+    entregado: bool
+    estudiante: EstudianteSimple  
+
+    class Config:
+        from_attributes = True
+
+class RutaDiaActivaResponse(BaseModel):
+    id_ruta: int
+    fecha: date
+    estado: str
+    paradas: List[ParadaRutaDiaResponse]
+    
+class ParadaFinalRutaFijaCreate(BaseModel):
+    latitud: float
+    longitud: float
+    
+class RutaFijaUpdate(BaseModel):
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    paradas_estudiantes: Optional[List[ParadaEstudianteRutaFijaCreate]] = None
+    parada_final: Optional[ParadaFinalRutaFijaCreate] = None
+
+class ParadaEstudianteRutaFijaResponse(BaseModel):
+    id_parada_ruta_fija: int
+    orden: int
+    estudiante: EstudianteBasico
+
+    class Config:
+        from_attributes = True
+
+
+class ParadaFinalRutaFijaResponse(BaseModel):
+    id_parada_ruta_fija: int
+    orden: int
+    latitud: float
+    longitud: float
 
     class Config:
         from_attributes = True
         
-class ParadaRutaFijaCreate(BaseModel):
-    id_estudiante: int
-    orden: int
-    
+        
+class RutaFijaResponse(BaseModel):
+    id_ruta_fija: int
+    nombre: str
+    descripcion: str
+    id_conductor: int
+    paradas: List[ParadaEstudianteRutaFijaResponse]
+    parada_final: Optional[ParadaFinalRutaFijaResponse] = None
 
-class RutaFijaUpdate(BaseModel):
-    nombre: Optional[str] = None
-    descripcion: Optional[str] = None
-    paradas: Optional[List[ParadaRutaFijaCreate]] = None  
-    
-
+    class Config:
+        from_attributes = True
