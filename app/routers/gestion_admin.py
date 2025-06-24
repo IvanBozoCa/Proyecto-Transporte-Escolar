@@ -249,17 +249,25 @@ def eliminar_acompanante(id_acompanante: int, db: Session = Depends(get_db), _: 
 
 # ---------- GET -----------
 
-@router.get("/admin/conductor/{id_usuario}", response_model=schemas.ConductorCompletoResponse)
-def obtener_conductor_completo(
-    id_usuario: int,
+
+@router.get("/acompanantes", response_model=List[schemas.AcompananteResponse])
+def listar_acompanantes(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    usuario = db.query(models.Usuario).filter_by(id_usuario=id_usuario, tipo_usuario="conductor").first()
-    if not usuario or not usuario.conductor:
+    return db.query(models.Acompanante).all()
+
+@router.get("/conductor/{id_conductor}", response_model=schemas.ConductorCompletoResponse)
+def obtener_conductor_completo(
+    id_conductor: int,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    conductor = db.query(models.Conductor).filter_by(id_conductor=id_conductor).first()
+    if not conductor or not conductor.usuario:
         raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    conductor = usuario.conductor
+    usuario = conductor.usuario
 
     return schemas.ConductorCompletoResponse(
         usuario=schemas.UsuarioResponse(
@@ -279,36 +287,7 @@ def obtener_conductor_completo(
     )
 
 
-@router.get("/acompanantes", response_model=List[schemas.AcompananteResponse])
-def listar_acompanantes(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    return db.query(models.Acompanante).all()
 
-@router.get("/conductores-estudiantes", response_model=List[schemas.ConductorConEstudiantes])
-def listar_conductores_con_estudiantes(
-    db: Session = Depends(get_db),
-    _: models.Usuario = Depends(verificar_admin)
-):
-    conductores = db.query(models.Conductor).all()
-    resultado = []
-
-    for conductor in conductores:
-        usuario = conductor.usuario
-        estudiantes = db.query(models.Estudiante).filter_by(id_conductor=conductor.id_conductor).all()
-
-        resultado.append(schemas.ConductorConEstudiantes(
-            id_usuario=usuario.id_usuario,
-            nombre=usuario.nombre,
-            email=usuario.email,
-            telefono=usuario.telefono,
-            patente=conductor.patente,
-            modelo_vehiculo=conductor.modelo_vehiculo,
-            estudiantes=estudiantes
-        ))
-
-    return resultado
 @router.get("/apoderados-detalle", response_model=List[schemas.ApoderadoConEstudiantes])
 def obtener_apoderados_con_estudiantes(
     db: Session = Depends(get_db),
@@ -334,8 +313,7 @@ def obtener_apoderados_con_estudiantes(
         ))
 
     return resultado
-
-@router.get("/conductores", response_model=List[schemas.ConductorConEstudiantes])
+@router.get("/conductores", response_model=List[schemas.ConductorConAcompanante])
 def obtener_conductores_con_acompanante(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
@@ -344,8 +322,11 @@ def obtener_conductores_con_acompanante(
     resultado = []
     for c in conductores:
         usuario = c.usuario
-        acompanante = c.acompanante
-        resultado.append(schemas.ConductorConEstudiantes(
+        acompanante = None
+        if c.acompanante:
+            acompanante = schemas.NombreAcompanante(nombre_completo=c.acompanante.nombre)
+        
+        resultado.append(schemas.ConductorConAcompanante(
             id_usuario=usuario.id_usuario,
             nombre=usuario.nombre,
             email=usuario.email,
@@ -355,6 +336,7 @@ def obtener_conductores_con_acompanante(
             acompanante=acompanante
         ))
     return resultado
+
 
 
 

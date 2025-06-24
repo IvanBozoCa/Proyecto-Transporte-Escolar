@@ -284,6 +284,21 @@ class UbicacionConductorResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+class NombreAcompanante(BaseModel):
+    nombre_completo: str
+
+    class Config:
+        from_attributes = True
+class ConductorConAcompanante(BaseModel):
+    id_usuario: int
+    nombre: str
+    email: str
+    telefono: str
+    patente: str
+    modelo_vehiculo: str
+    acompanante: Optional[NombreAcompanante] = None
+
 
 # ========== RUTA ==========
 
