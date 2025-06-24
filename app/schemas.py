@@ -568,7 +568,7 @@ class RutaFijaUpdate(BaseModel):
 class ParadaEstudianteRutaFijaResponse(BaseModel):
     id_parada_ruta_fija: int
     orden: int
-    estudiante: EstudianteBasico
+    estudiante: Optional[EstudianteBasico] = None
 
     class Config:
         from_attributes = True
@@ -594,3 +594,7 @@ class RutaFijaResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        
+class EstudianteAConductor(BaseModel):
+    id_estudiante: int
+    id_usuario_conductor: int  

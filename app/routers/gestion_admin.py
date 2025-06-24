@@ -176,21 +176,24 @@ def crear_conductor_completo(
 
 @router.post("/asignar-estudiante-conductor")
 def asignar_estudiante_a_conductor(
-    id_estudiante: int,
-    id_conductor: int,
+    datos: schemas.EstudianteAConductor,
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    estudiante = db.query(models.Estudiante).filter_by(id_estudiante=id_estudiante).first()
-    conductor = db.query(models.Conductor).filter_by(id_conductor=id_conductor).first()
+    estudiante = db.query(models.Estudiante).filter_by(id_estudiante=datos.id_estudiante).first()
+    conductor = db.query(models.Conductor).filter_by(id_usuario=datos.id_usuario_conductor).first()
 
-    if not estudiante or not conductor:
-        raise HTTPException(status_code=404, detail="Estudiante o conductor no encontrado")
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
+    if not conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado para ese usuario")
 
-    estudiante.id_conductor = id_conductor
+    estudiante.id_conductor = conductor.id_conductor
     db.commit()
-    return {"mensaje": "Estudiante asignado al conductor"}
 
+    return {"mensaje": "Estudiante asignado al conductor correctamente"}
+
+    
 @router.post("/asignar-acompanante")
 def asignar_acompanante_a_conductor(
     id_conductor: int,
