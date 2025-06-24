@@ -150,7 +150,7 @@ class ApoderadoYEstudiantecreate(BaseModel):
     estudiante: EstudianteCreate
     
 class ApoderadoYEstudiante(BaseModel):
-    apoderado: UsuarioCreate
+    apoderado: UsuarioUpdate
     estudiante: EstudianteUpdate
 
 class ApoderadoYEstudianteResponse(BaseModel):

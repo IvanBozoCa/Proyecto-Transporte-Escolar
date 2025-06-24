@@ -3,13 +3,10 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Depends, HTTPException, status
-from jose import JWTError, jwt
+from fastapi import Depends, HTTPException, status, Security
 from app import schemas, models, database
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from fastapi import Request
-from fastapi import Security
 from app.models import Usuario
 
 # Dependencia para obtener la sesión de base de datos
@@ -20,15 +17,15 @@ def get_db():
     finally:
         db.close()
 
-
 # Configuración de la clave secreta y algoritmo
 SECRET_KEY = "furgonescolar"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Hacemos que dure 10 años
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 365 * 10  # 10 años
 
 # Contexto de hasheo con bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 # Función para hashear contraseñas
 def hash_contrasena(plain_password: str) -> str:
@@ -46,7 +43,7 @@ def crear_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# Función para decodificar y validar el token (opcional, útil para proteger rutas)
+# Función para decodificar y validar el token
 def verificar_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -54,8 +51,7 @@ def verificar_token(token: str) -> Optional[dict]:
     except JWTError:
         return None
 
-
-
+# Bearer token
 bearer_scheme = HTTPBearer()
 
 # Función para obtener el usuario desde el token
@@ -63,7 +59,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(bearer_scheme),
     db: Session = Depends(get_db)
 ) -> models.Usuario:
-    token = credentials.credentials  # Ahora tomamos el token del objeto HTTPBearer
+    token = credentials.credentials
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -87,17 +83,12 @@ def get_current_user(
     return user
 
 # Verificar tipo de usuario
-
-def verificar_admin(
-    usuario: Usuario = Depends(get_current_user),
-):
+def verificar_admin(usuario: Usuario = Depends(get_current_user)):
     if usuario.tipo_usuario != "administrador":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
     return usuario
 
-def verificar_tipo_usuario(
-    usuario: Usuario = Depends(get_current_user),
-):
-    if usuario.tipo_usuario != "conductor" or "apoderado":
+def verificar_tipo_usuario(usuario: Usuario = Depends(get_current_user)):
+    if usuario.tipo_usuario not in ["conductor", "apoderado"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
     return usuario
