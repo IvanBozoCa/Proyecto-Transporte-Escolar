@@ -364,7 +364,6 @@ class RutaConParadasResponse(BaseModel):
 
 #========ASISTENCIAS===============
 
-
 class EstudianteRutaInfo(BaseModel):
     id_estudiante: int
     nombre: str
@@ -385,7 +384,7 @@ class AsistenciaResponse(BaseModel):
         from_attributes = True
 
 class AsistenciaCreate(BaseModel):
-    fecha: date
+    id_estudiante: int
     asiste: bool
 
 class AsistenciaHoyResponse(BaseModel):

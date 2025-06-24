@@ -79,7 +79,6 @@ class Estudiante(Base):
     lat_colegio = Column(DECIMAL(9, 6), nullable=True)
     long_colegio = Column(DECIMAL(9, 6), nullable=True)
     curso = Column(Text, nullable=True)
-    activo = Column(Boolean, default=True)
 
     nombre_apoderado_secundario = Column(String, nullable=True)
     telefono_apoderado_secundario = Column(String, nullable=True)

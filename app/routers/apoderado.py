@@ -1,88 +1,57 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Usuario, Conductor
-from app.auth import get_current_user, verificar_admin
+from app.models import Usuario, Conductor, Asistencia
+from app.auth import get_current_user, verificar_admin, verificar_tipo_usuario
 from app import models, schemas
 from typing import List
+from datetime import date
 
 router = APIRouter(
     prefix="/apoderado",
     tags=["Apoderado"]
 )
 
-@router.get("/mis-estudiantes", response_model=List[schemas.EstudianteConConductor])
-def obtener_mis_estudiantes(
-    usuario_actual: models.Usuario = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Verificar que el usuario sea apoderado
-    if usuario_actual.tipo_usuario != "apoderado":
-        raise HTTPException(status_code=403, detail="Solo los apoderados pueden acceder a esta información.")
-
-    apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
-    if not apoderado:
-        raise HTTPException(status_code=404, detail="No se encontró un apoderado vinculado a este usuario.")
-
-    estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
-
-    resultado = []
-    for est in estudiantes:
-        nombre_conductor = None
-        if est.conductor and est.conductor.usuario:
-            nombre_conductor = est.conductor.usuario.nombre
-
-        resultado.append(schemas.EstudianteConConductor(
-            id_estudiante=est.id_estudiante,
-            nombre=est.nombre,
-            edad=est.edad,
-            direccion=est.direccion,
-            curso=est.curso,
-            colegio=est.colegio,
-            nombre_conductor=nombre_conductor
-        ))
-
-    return resultado
-
-
-@router.put("/marcar/{id_estudiante}", response_model=schemas.AsistenciaResponse)
-def marcar_asistencia_estudiante(
+@router.post("/asistencia", response_model=dict)
+def registrar_asistencia(
     id_estudiante: int,
     asistencia: schemas.AsistenciaCreate,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
+    # Solo apoderados pueden registrar asistencia
     if usuario_actual.tipo_usuario != "apoderado":
-        raise HTTPException(status_code=403, detail="Solo los apoderados pueden marcar asistencias.")
+        raise HTTPException(status_code=403, detail="No autorizado")
 
-    apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
-    if not apoderado:
-        raise HTTPException(status_code=404, detail="Apoderado no encontrado.")
+    estudiante = db.query(models.Estudiante).filter_by(id_estudiante=asistencia.id_estudiante).first()
+    if not estudiante or estudiante.id_apoderado != usuario_actual.apoderado.id_apoderado:
+        raise HTTPException(status_code=403, detail="No autorizado para este estudiante")
 
-    estudiante = db.query(models.Estudiante).filter_by(
-        id_estudiante=id_estudiante, id_apoderado=apoderado.id_apoderado
+    registro = db.query(models.Asistencia).filter_by(
+        id_estudiante=asistencia.id_estudiante,
     ).first()
 
-    if not estudiante:
-        raise HTTPException(status_code=404, detail="Estudiante no pertenece al apoderado.")
-
-    asistencia_existente = db.query(models.Asistencia).filter_by(
-        id_estudiante=id_estudiante,
-        fecha=asistencia.fecha
-    ).first()
-
-    if asistencia_existente:
-        asistencia_existente.asiste = asistencia.asiste
-        db.commit()
-        db.refresh(asistencia_existente)
-        return asistencia_existente
+    if registro:
+        registro.asiste = asistencia.asiste
     else:
-        nueva_asistencia = models.Asistencia(
-            id_estudiante=id_estudiante,
-            fecha=asistencia.fecha,
+        nuevo = models.Asistencia(
+            id_estudiante=asistencia.id_estudiante,
             asiste=asistencia.asiste
         )
-        db.add(nueva_asistencia)
-        db.commit()
-        db.refresh(nueva_asistencia)
-        return nueva_asistencia
+        db.add(nuevo)
+
+    db.commit()
+    return {"mensaje": "Asistencia registrada correctamente"}
+
+
+@router.get("/asistencia/hoy", response_model=List[schemas.EstudianteBasico])
+def estudiantes_presentes_hoy(
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(get_current_user)
+):
+    hoy = date.today()
+
+    asistencias = db.query(models.Asistencia).filter_by(fecha=hoy, asiste=True).all()
+    estudiantes = [asistencia.estudiante for asistencia in asistencias]
+
+    return estudiantes
