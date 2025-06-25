@@ -328,15 +328,10 @@ class RutaResponse(BaseModel):
 class EstudianteBasico(BaseModel):
     id_estudiante: int
     nombre: str
-    casa: Optional[str]
-    lat_casa: Optional[float]
-    long_casa: Optional[float]
-    colegio: Optional[str] = None
-    curso: Optional[str] = None
 
-    class Config:
-        from_attributes = True
-
+    model_config = {
+        "from_attributes": True
+    }
 
 class ParadaResponse(BaseModel):
     orden: int
@@ -344,7 +339,7 @@ class ParadaResponse(BaseModel):
     longitud: float
     recogido: bool
     entregado: bool
-    estudiante: EstudianteBasico
+    estudiante: Optional[EstudianteSimple] = None 
 
     class Config:
         from_attributes = True
@@ -494,13 +489,6 @@ class UsuarioConDatos(BaseModel):
 
 
 # ======= Ruta Fija =======
-class EstudianteBasico(BaseModel):
-    id_estudiante: int
-    nombre: str
-
-    model_config = {
-        "from_attributes": True
-    }
 
 class ParadaRutaFijaCreate(BaseModel):
     id_estudiante: Optional[int] = None  
@@ -554,10 +542,6 @@ class RutaDiaActivaResponse(BaseModel):
     fecha: date
     estado: str
     paradas: List[ParadaRutaDiaResponse]
-    
-class ParadaFinalRutaFijaCreate(BaseModel):
-    latitud: float
-    longitud: float
     
 class RutaFijaUpdate(BaseModel):
     nombre: Optional[str] = None

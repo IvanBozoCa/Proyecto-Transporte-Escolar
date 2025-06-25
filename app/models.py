@@ -143,7 +143,7 @@ class Parada(Base):
     longitud = Column(DECIMAL(9, 6))
     recogido = Column(Boolean, default=False)
     entregado = Column(Boolean, default=False)
-
+    es_destino_final = Column(Boolean, default=False)
     estudiante = relationship("Estudiante", back_populates="paradas")
     ruta = relationship("Ruta", back_populates="paradas")
 

@@ -119,189 +119,140 @@ def obtener_mis_rutas_fijas(
             .all()
         )
 
-        parada_respuestas = [
-            schemas.ParadaRutaFijaResponse(
-                id_parada_ruta_fija=parada.id_parada_ruta_fija,
-                orden=parada.orden,
-                estudiante=schemas.EstudianteBasico(
-                    id_estudiante=parada.estudiante.id_estudiante,
-                    nombre=parada.estudiante.nombre
+        paradas_estudiantes = []
+        parada_final = None
+
+        for parada in paradas:
+            if parada.id_estudiante and parada.estudiante:
+                paradas_estudiantes.append(
+                    schemas.ParadaEstudianteRutaFijaResponse(
+                        id_parada_ruta_fija=parada.id_parada_ruta_fija,
+                        orden=parada.orden,
+                        estudiante=schemas.EstudianteBasico(
+                            id_estudiante=parada.estudiante.id_estudiante,
+                            nombre=parada.estudiante.nombre
+                        )
+                    )
                 )
-            ) for parada in paradas
-        ]
+            elif parada.es_destino_final:
+                parada_final = schemas.ParadaFinalRutaFijaResponse(
+                    id_parada_ruta_fija=parada.id_parada_ruta_fija,
+                    orden=parada.orden,
+                    latitud=parada.latitud,
+                    longitud=parada.longitud
+                )
 
         resultado.append(
             schemas.RutaFijaResponse(
                 id_ruta_fija=ruta.id_ruta_fija,
                 nombre=ruta.nombre,
+                descripcion=ruta.descripcion,
                 id_conductor=ruta.id_conductor,
-                paradas=parada_respuestas
+                paradas=paradas_estudiantes,
+                parada_final=parada_final
             )
         )
 
     return resultado
 
-
-
-@router.get("/conductor/ultima-ruta", response_model=schemas.RutaConParadasResponse)
-def ver_ultima_ruta_del_conductor(
-    db: Session = Depends(get_db),
-    usuario_actual: models.Usuario = Depends(get_current_user)
-):
-    if usuario_actual.tipo_usuario != "conductor":
-        raise HTTPException(status_code=403, detail="Acceso restringido a conductores")
-
-    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
-    if not conductor:
-        raise HTTPException(status_code=404, detail="Conductor no encontrado")
-
-    hoy = date.today()
-
-    ruta = (
-        db.query(models.Ruta)
-        .filter_by(id_conductor=conductor.id_conductor, fecha=hoy)
-        .order_by(models.Ruta.id_ruta.desc())
-        .first()
-    )
-
-    if not ruta:
-        raise HTTPException(status_code=404, detail="No se encontró una ruta para hoy.")
-
-    paradas_ordenadas = sorted(ruta.paradas, key=lambda p: p.orden)
-
-    parada_responses = [
-        schemas.ParadaRutaDiaResponse(
-            id_parada=parada.id_parada,
-            orden=parada.orden,
-            recogido=parada.recogido,
-            entregado=parada.entregado,
-            estudiante=schemas.EstudianteSimple.from_orm(parada.estudiante)
-        ) for parada in paradas_ordenadas
-    ]
-
-    return schemas.RutaConParadasResponse(
-        id_ruta=ruta.id_ruta,
-        fecha=ruta.fecha,
-        estado=ruta.estado,
-        paradas=parada_responses
-    )
-
-
-@router.get("/ruta-dia/activa", response_model=schemas.RutaDiaActivaResponse)  # para control en tiempo real
-def obtener_ruta_dia_activa(
-    db: Session = Depends(get_db),
-    usuario_actual: models.Usuario = Depends(get_current_user)
-):
-    if usuario_actual.tipo_usuario != "conductor":
-        raise HTTPException(status_code=403, detail="No autorizado")
-
-    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
-    if not conductor:
-        raise HTTPException(status_code=404, detail="Conductor no encontrado")
-
-    ruta = db.query(models.Ruta).filter_by(
-        id_conductor=conductor.id_conductor,
-        estado="activa"
-    ).first()
-
-    if not ruta:
-        raise HTTPException(status_code=404, detail="No tienes una ruta activa")
-
-    # Paradas ordenadas por número
-    paradas_ordenadas = sorted(ruta.paradas, key=lambda p: p.orden)
-
-    parada_responses = [
-        schemas.ParadaRutaDiaResponse(
-            id_parada=parada.id_parada,
-            orden=parada.orden,
-            recogido=parada.recogido,
-            entregado=parada.entregado,
-            estudiante=schemas.EstudianteSimple.from_orm(parada.estudiante)
-        ) for parada in paradas_ordenadas
-    ]
-
-    return schemas.RutaDiaActivaResponse(
-        id_ruta=ruta.id_ruta,
-        fecha=ruta.fecha,
-        estado=ruta.estado,
-        paradas=parada_responses
-    )
-
-
 @router.post("/generar-ruta-dia/{id_ruta_fija}", response_model=schemas.RutaConParadasResponse)
-def generar_ruta_dia_desde_ruta_fija(
+def generar_ruta_dia(
     id_ruta_fija: int,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
     if usuario_actual.tipo_usuario != "conductor":
-        raise HTTPException(status_code=403, detail="No autorizado")
+        raise HTTPException(status_code=403, detail="Solo los conductores pueden generar rutas")
 
     conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=id_ruta_fija).first()
-    if not ruta_fija or ruta_fija.id_conductor != conductor.id_conductor:
-        raise HTTPException(status_code=403, detail="La ruta fija no pertenece a este conductor")
+    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=id_ruta_fija, id_conductor=conductor.id_conductor).first()
+    if not ruta_fija:
+        raise HTTPException(status_code=404, detail="Ruta fija no encontrada para este conductor")
 
-    ruta_activa = db.query(models.Ruta).filter_by(
-        id_conductor=conductor.id_conductor,
-        estado="activa"
-    ).first()
+    hoy = date.today()
 
-    if ruta_activa:
-        raise HTTPException(status_code=400, detail="Ya existe una ruta activa. Finalízala antes de crear una nueva.")
-
-    asistencias_hoy = db.query(models.Asistencia).filter_by(fecha=date.today()).all()
-    ids_ausentes = {a.id_estudiante for a in asistencias_hoy if not a.asiste}
-
-    paradas_creadas = []
-    orden = 1
-
-    for parada_fija in sorted(ruta_fija.paradas, key=lambda x: x.orden):
-        estudiante = parada_fija.estudiante
-        if not parada_fija.es_destino_final and estudiante.id_estudiante not in ids_ausentes:
-            parada = models.Parada(
-                id_estudiante=estudiante.id_estudiante,
-                orden=orden,
-                latitud=estudiante.lat_casa,
-                longitud=estudiante.long_casa,
-                recogido=False,
-                entregado=False
-            )
-            paradas_creadas.append(parada)
-            orden += 1
-
-    # Agregar la parada final si existe
-    parada_final = next((p for p in ruta_fija.paradas if p.es_destino_final), None)
-    if parada_final and parada_final.latitud is not None and parada_final.longitud is not None:
-        parada_destino = models.Parada(
-        orden=orden,
-        latitud=parada_final.latitud,
-        longitud=parada_final.longitud,
-        recogido=False,
-        entregado=False,
-        es_destino_final=True
+    # Validar que no tenga una ruta activa
+    ruta_activa = (
+        db.query(models.Ruta)
+        .filter_by(id_conductor=conductor.id_conductor, fecha=hoy, estado="activa")
+        .first()
     )
-    paradas_creadas.append(parada_destino)
-
-    if not paradas_creadas:
-        raise HTTPException(status_code=400, detail="No hay estudiantes presentes hoy en esta ruta fija")
+    if ruta_activa:
+        raise HTTPException(status_code=400, detail="Ya existe una ruta activa para hoy")
 
     nueva_ruta = models.Ruta(
         id_conductor=conductor.id_conductor,
-        fecha=date.today(),
-        estado="activa",
+        fecha=hoy,
         hora_inicio=datetime.now().time(),
-        paradas=paradas_creadas
+        estado="activa"
     )
-
     db.add(nueva_ruta)
     db.commit()
     db.refresh(nueva_ruta)
 
-    return nueva_ruta
+    paradas_fijas = (
+        db.query(models.ParadaRutaFija)
+        .filter_by(id_ruta_fija=id_ruta_fija)
+        .order_by(models.ParadaRutaFija.orden)
+        .all()
+    )
+
+    for parada_fija in paradas_fijas:
+        parada = models.Parada(
+            id_ruta=nueva_ruta.id_ruta,
+            orden=parada_fija.orden,
+            latitud=parada_fija.latitud,
+            longitud=parada_fija.longitud,
+            recogido=False,
+            entregado=False,
+            id_estudiante=parada_fija.id_estudiante if not parada_fija.es_destino_final else None
+        )
+        db.add(parada)
+
+    db.commit()
+    db.refresh(nueva_ruta)
+
+    # Preparar respuesta
+    paradas_ordenadas = sorted(nueva_ruta.paradas, key=lambda p: p.orden)
+    parada_responses = []
+    for parada in paradas_ordenadas:
+        estudiante = parada.estudiante
+        parada_responses.append(
+            schemas.ParadaResponse(
+                orden=parada.orden,
+                latitud=parada.latitud,
+                longitud=parada.longitud,
+                recogido=parada.recogido,
+                entregado=parada.entregado,
+                estudiante=schemas.EstudianteSimple(
+                    id_estudiante=estudiante.id_estudiante,
+                    nombre=estudiante.nombre,
+                    edad=estudiante.edad,
+                    colegio=estudiante.colegio,
+                    curso=estudiante.curso,
+                    casa=estudiante.casa,
+                    lat_casa=estudiante.lat_casa,
+                    long_casa=estudiante.long_casa,
+                    lat_colegio=estudiante.lat_colegio,
+                    long_colegio=estudiante.long_colegio,
+                    nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+                    telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario
+                ) if estudiante else None
+            )
+        )
+
+    return schemas.RutaConParadasResponse(
+        id_ruta=nueva_ruta.id_ruta,
+        fecha=nueva_ruta.fecha,
+        estado=nueva_ruta.estado,
+        hora_inicio=nueva_ruta.hora_inicio,
+        id_acompanante=nueva_ruta.id_acompanante,
+        paradas=parada_responses
+    )
+
 
 
 
