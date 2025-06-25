@@ -342,6 +342,29 @@ def marcar_parada_como_recogida(
             )
     return parada
 
+@router.get("/parada/{id_parada}", response_model=schemas.ParadaResponse)
+def obtener_parada_por_id(
+    id_parada: int,
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "conductor":
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado")
+
+    parada = db.query(models.Parada).join(models.Ruta).filter(models.Parada.id_parada == id_parada).first()
+
+    if not parada:
+        raise HTTPException(status_code=404, detail="Parada no encontrada")
+
+    if parada.ruta.id_conductor != conductor.id_conductor:
+        raise HTTPException(status_code=403, detail="Esta parada no pertenece a tu ruta")
+
+    return parada
+
 
 @router.put("/parada/{id_parada}/entregar", response_model=schemas.ParadaResponse)
 def entregar_estudiante(

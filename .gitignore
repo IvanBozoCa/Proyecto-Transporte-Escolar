@@ -1,0 +1,18 @@
+# Ignorar claves de Firebase locales
+app/firebase/firebase_key.json
+
+# Ignorar configuraciones locales
+.env
+
+# Ignorar entornos virtuales
+env/
+venv/
+
+# Ignorar archivos temporales
+__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# Ignorar archivos del sistema
+.DS_Store
