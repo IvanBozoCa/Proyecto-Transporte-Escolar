@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException ,Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Usuario, Conductor
@@ -6,6 +6,7 @@ from app.auth import get_current_user, verificar_admin, verificar_tipo_usuario
 from app import models, schemas
 from typing import List
 from datetime import date, datetime
+from app.firebase import notificaciones
 
 router = APIRouter(
     prefix="/conductor",
@@ -174,7 +175,6 @@ def generar_ruta_dia(
 
     hoy = date.today()
 
-    # Validar que no tenga una ruta activa
     ruta_activa = (
         db.query(models.Ruta)
         .filter_by(id_conductor=conductor.id_conductor, fecha=hoy, estado="activa")
@@ -212,10 +212,23 @@ def generar_ruta_dia(
         )
         db.add(parada)
 
+        if not parada_fija.es_destino_final and parada_fija.estudiante:
+            estudiante = parada_fija.estudiante
+            apoderado_usuario = estudiante.apoderado.usuario if estudiante.apoderado else None
+
+            if apoderado_usuario and apoderado_usuario.token_firebase:
+                try:
+                    notificaciones.enviar_notificacion_token(
+                        apoderado_usuario.token_firebase,
+                        "Ruta iniciada",
+                        f"El estudiante {estudiante.nombre} ha sido incluido en la ruta de hoy."
+                    )
+                except Exception as e:
+                    print(f"Error al enviar notificación: {str(e)}")
+
     db.commit()
     db.refresh(nueva_ruta)
 
-    # Preparar respuesta
     paradas_ordenadas = sorted(nueva_ruta.paradas, key=lambda p: p.orden)
     parada_responses = []
     for parada in paradas_ordenadas:
@@ -255,34 +268,30 @@ def generar_ruta_dia(
 
 
 
-
-@router.put("/finalizar-ruta-dia")
-def finalizar_ruta_dia(
+@router.put("/ruta/finalizar")
+def finalizar_ruta(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
     if usuario_actual.tipo_usuario != "conductor":
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    # Obtener al conductor desde el usuario
     conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    # Buscar la ruta activa actual
-    ruta = db.query(models.Ruta).filter_by(
-        id_conductor=conductor.id_conductor,
-        estado="activa"
-    ).first()
-
+    ruta = db.query(models.Ruta).filter_by(id_conductor=conductor.id_conductor, estado="activa").first()
     if not ruta:
-        raise HTTPException(status_code=404, detail="No hay una ruta activa para finalizar")
+        raise HTTPException(status_code=404, detail="No hay ruta activa")
 
     ruta.estado = "finalizada"
-    ruta.hora_fin = datetime.now().time()
+    ruta.hora_termino = datetime.now().time()
     db.commit()
 
-    return {"mensaje": "Ruta finalizada exitosamente"}
+    notificaciones.eliminar_ubicacion_conductor(conductor.id_conductor)
+
+    return {"mensaje": "Ruta finalizada correctamente"}
+
 
 
 @router.put("/parada/{id_parada}/recoger", response_model=schemas.ParadaResponse)
@@ -312,7 +321,16 @@ def marcar_parada_como_recogida(
     parada.recogido = True
     db.commit()
     db.refresh(parada)
-
+    
+    estudiante = parada.estudiante
+    if estudiante and estudiante.apoderado:
+        token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=estudiante.apoderado.id_usuario).first()
+        if token_entry:
+            notificaciones.enviar_notificacion(
+                token=token_entry.token,
+                titulo="Estudiante recogido",
+                cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor."
+            )
     return parada
 
 
@@ -340,12 +358,38 @@ def entregar_estudiante(
     db.commit()
     db.refresh(parada)
 
-    # Verifica si esta parada es el destino final
+    # Si es parada final, finaliza la ruta y envía a Firebase
     if parada.es_destino_final:
         ruta.estado = "finalizada"
         ruta.hora_termino = datetime.now().time()
         db.commit()
         db.refresh(ruta)
-        return parada  # Devolvemos la parada actualizada
+
+        try:
+            notificaciones.enviar_finalizacion_ruta(ruta.id_conductor)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al notificar finalización: {str(e)}")
 
     return parada
+
+
+@router.put("/conductor/ubicacion")
+def actualizar_ubicacion_conductor(
+    latitud: float = Query(..., description="Latitud actual del conductor"),
+    longitud: float = Query(..., description="Longitud actual del conductor"),
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "conductor":
+        raise HTTPException(status_code=403, detail="Acceso no autorizado")
+
+    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado")
+
+    try:
+        notificaciones.enviar_ubicacion_conductor(conductor.id_conductor, latitud, longitud)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al actualizar en Firebase: {str(e)}")
+
+    return {"mensaje": "Ubicación actualizada en Firebase"}

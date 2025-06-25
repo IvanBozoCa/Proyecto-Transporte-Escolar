@@ -19,7 +19,7 @@ class Usuario(Base):
     apoderado = relationship("Apoderado", back_populates="usuario", uselist=False,cascade="all, delete")
     conductor = relationship("Conductor", back_populates="usuario", uselist=False,cascade="all, delete")
     notificaciones = relationship("Notificacion", back_populates="usuario")
-
+    token_firebase = relationship("TokenFirebase", back_populates="usuario", uselist=False)
 
 # ================= CONDUCTOR =================
 class Conductor(Base):
@@ -208,3 +208,13 @@ class ParadaRutaFija(Base):
     estudiante = relationship("Estudiante")
     latitud = Column(Float)
     longitud = Column(Float)
+    
+    
+class TokenFirebase(Base):
+    __tablename__ = "token_firebase"
+
+    id_token = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
+    token = Column(String, unique=True, nullable=False)
+
+    usuario = relationship("Usuario", back_populates="token_firebase")

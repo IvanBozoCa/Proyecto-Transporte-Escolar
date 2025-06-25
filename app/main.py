@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app import models
-from app.routers import login, usuarios, gestion_admin, conductor, rutas, apoderado
+from app.routers import login, usuarios, gestion_admin, conductor, rutas, apoderado,firebase_cosas
 from dotenv import load_dotenv
 
 # Cargar variables de entorno desde un archivo .env (opcional)
@@ -36,6 +36,7 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(login.router, prefix="/auth", tags=["Autenticación"])
+app.include_router(firebase_cosas.router, prefix="/firebase", tags=["Firebase"])
 app.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
 app.include_router(gestion_admin.router, prefix="/admin", tags=["Administrador"])
 app.include_router(conductor.router, prefix="/conductor", tags=["Conductor"])

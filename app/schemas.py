@@ -416,7 +416,11 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    
+
+class TokenFirebaseCreate(BaseModel):
+    token: str
+
+ 
 class FilaListadoGeneral(BaseModel):
     nombre_apoderado: str
     nombre_estudiante: str
