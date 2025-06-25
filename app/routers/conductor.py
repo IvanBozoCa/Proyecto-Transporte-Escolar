@@ -200,6 +200,8 @@ def generar_ruta_dia(
         .all()
     )
 
+    tokens = set()
+
     for parada_fija in paradas_fijas:
         parada = models.Parada(
             id_ruta=nueva_ruta.id_ruta,
@@ -212,19 +214,26 @@ def generar_ruta_dia(
         )
         db.add(parada)
 
-        if not parada_fija.es_destino_final and parada_fija.estudiante:
-            estudiante = parada_fija.estudiante
-            apoderado_usuario = estudiante.apoderado.usuario if estudiante.apoderado else None
+        if not parada_fija.es_destino_final and parada_fija.id_estudiante:
+            estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada_fija.id_estudiante).first()
+            if estudiante and estudiante.apoderado and estudiante.apoderado.usuario:
+                token = estudiante.apoderado.usuario.token_firebase
+                if isinstance(token, str) and token.strip():
+                    tokens.add(token.strip())
 
-            if apoderado_usuario and apoderado_usuario.token_firebase:
-                try:
-                    notificaciones.enviar_notificacion_token(
-                        apoderado_usuario.token_firebase,
-                        "Ruta iniciada",
-                        f"El estudiante {estudiante.nombre} ha sido incluido en la ruta de hoy."
-                    )
-                except Exception as e:
-                    print(f"Error al enviar notificación: {str(e)}")
+    # Enviar notificación grupal si hay tokens válidos
+    if tokens:
+        try:
+            print(f"[INFO] Enviando notificación de inicio a {len(tokens)} apoderados.")
+            notificaciones.enviar_notificacion_inicio_ruta(
+                titulo="Ruta iniciada",
+                cuerpo="La ruta escolar del día ha comenzado.",
+                tokens=list(tokens)
+            )
+            
+            notificaciones.enviar_inicio_ruta(conductor.id_conductor)
+        except Exception as e:
+            print(f"Error al enviar notificación grupal: {e}")
 
     db.commit()
     db.refresh(nueva_ruta)
@@ -256,7 +265,7 @@ def generar_ruta_dia(
                 ) if estudiante else None
             )
         )
-
+    notificaciones.marcar_ruta_activa(conductor.id_conductor)
     return schemas.RutaConParadasResponse(
         id_ruta=nueva_ruta.id_ruta,
         fecha=nueva_ruta.fecha,
@@ -289,7 +298,7 @@ def finalizar_ruta(
     db.commit()
 
     notificaciones.eliminar_ubicacion_conductor(conductor.id_conductor)
-
+    notificaciones.eliminar_ruta_activa(conductor.id_conductor)
     return {"mensaje": "Ruta finalizada correctamente"}
 
 

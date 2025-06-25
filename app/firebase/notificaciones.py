@@ -25,8 +25,18 @@ def enviar_ubicacion_conductor(id_conductor: int, latitud: float, longitud: floa
         "latitud": latitud,
         "longitud": longitud
     })
-
-# notificaciones.py
+    
+def enviar_inicio_ruta(id_conductor: int):
+    ref = db.reference(f"rutas_activas/conductor_{id_conductor}")
+    ref.set({
+        "mensaje": "Ruta iniciada",
+        "activa": True,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+def eliminar_inicio_ruta(id_conductor: int):
+    ref = db.reference(f"rutas_activas/conductor_{id_conductor}")
+    ref.delete()
 
 def enviar_finalizacion_ruta(id_conductor: int):
     ref = db.reference(f"rutas_finalizadas/conductor_{id_conductor}")
@@ -50,4 +60,22 @@ def enviar_notificacion_inicio_ruta(titulo: str, cuerpo: str, tokens: list[str])
         tokens=tokens
     )
     response = messaging.send_multicast(message)
+    print(f"Notificación grupal enviada. Éxito: {response.success_count}, Fallos: {response.failure_count}")
+    
+    for idx, resp in enumerate(response.responses):
+        if not resp.success:
+            print(f"Error en token {tokens[idx]}: {resp.exception}")
+    
     return response
+
+def marcar_ruta_activa(id_conductor: int):
+    ref = db.reference(f"rutas_activas/conductor_{id_conductor}")
+    ref.set({
+        "mensaje": "Ruta activa",
+        "activa": True,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+def eliminar_ruta_activa(id_conductor: int):
+    ref = db.reference(f"rutas_activas/conductor_{id_conductor}")
+    ref.delete()

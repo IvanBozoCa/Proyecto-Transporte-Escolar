@@ -1,12 +1,26 @@
+from dotenv import load_dotenv
 import os
+import json
 import firebase_admin
-from firebase_admin import credentials
+from firebase_admin import credentials, db
+
+# Cargar variables de entorno
+load_dotenv()
 
 def initialize_firebase():
     if not firebase_admin._apps:
-        ruta_credenciales = os.path.join(os.path.dirname(__file__), 'firebase_key.json')
+        cred_json = os.getenv("FIREBASE_KEY_JSON")
+        database_url = os.getenv("FIREBASE_DATABASE_URL")
 
-        cred = credentials.Certificate(ruta_credenciales)
+        if not cred_json:
+            raise ValueError("La variable de entorno FIREBASE_KEY_JSON no está configurada")
+
+        if not database_url:
+            raise ValueError("La variable de entorno FIREBASE_DATABASE_URL no está configurada")
+
+        cred_dict = json.loads(cred_json)
+        cred = credentials.Certificate(cred_dict)
+
         firebase_admin.initialize_app(cred, {
-            'databaseURL': os.getenv("FIREBASE_DATABASE_URL", "https://transporte-escolar-543e8-default-rtdb.firebaseio.com/")  # <-- reemplaza esto
+            'databaseURL': database_url
         })
