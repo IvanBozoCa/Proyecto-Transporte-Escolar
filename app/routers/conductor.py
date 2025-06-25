@@ -338,7 +338,7 @@ def marcar_parada_como_recogida(
             notificaciones.enviar_notificacion(
                 token=token_entry.token,
                 titulo="Estudiante recogido",
-                cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor."
+                cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor {conductor.nombre} ."
             )
     return parada
 
@@ -389,7 +389,15 @@ def entregar_estudiante(
     parada.entregado = True
     db.commit()
     db.refresh(parada)
-
+    estudiante = parada.estudiante
+    if estudiante and estudiante.apoderado:
+        token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=estudiante.apoderado.id_usuario).first()
+        if token_entry:
+            notificaciones.enviar_notificacion_recogida_estudiante(
+                nombre_estudiante=estudiante.nombre,
+                token=token_entry.token,
+                nombre_conductor=usuario_actual.nombre
+            )
     # Si es parada final, finaliza la ruta y envía a Firebase
     if parada.es_destino_final:
         ruta.estado = "finalizada"

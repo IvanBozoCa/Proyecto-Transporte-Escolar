@@ -27,5 +27,3 @@ def initialize_firebase():
         firebase_admin.initialize_app(cred, {
             'databaseURL': db_url
         })
-
-        print("Firebase inicializado correctamente en entorno local.")
