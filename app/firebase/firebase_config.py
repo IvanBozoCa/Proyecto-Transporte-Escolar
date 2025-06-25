@@ -8,7 +8,7 @@ load_dotenv()
 
 def initialize_firebase():
     if not firebase_admin._apps:
-        entorno = os.getenv("ENV", "local")
+        entorno = os.getenv("render", "local")
 
         # Trabajamos SOLO en entorno local
         if entorno != "local":
