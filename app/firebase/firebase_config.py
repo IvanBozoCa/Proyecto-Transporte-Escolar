@@ -1,25 +1,25 @@
 import os
-import json
-from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, db
 
-load_dotenv()
-
 def initialize_firebase():
     if not firebase_admin._apps:
-        cred_json = os.getenv("FIREBASE_KEY_JSON")
-        database_url = os.getenv("FIREBASE_DATABASE_URL")
+        entorno = os.getenv("ENV", "local")
 
-        if not cred_json or not database_url:
-            raise ValueError("Faltan variables de entorno")
+        if entorno == "render":
+            cred_path = "/etc/secrets/firebase_key_render.json"
+        else:
+            cred_path = os.getenv("FIREBASE_KEY_PATH")
 
-        try:
-            cred_dict = json.loads(cred_json)
-        except json.JSONDecodeError:
-            raise ValueError("El contenido de FIREBASE_KEY_JSON no es un JSON válido")
+        db_url = os.getenv("FIREBASE_DATABASE_URL")
 
-        cred = credentials.Certificate(cred_dict)
+        if not cred_path or not os.path.isfile(cred_path):
+            raise ValueError("No se encontró el archivo de clave de Firebase")
+
+        if not db_url:
+            raise ValueError("Falta la URL de la base de datos de Firebase")
+
+        cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred, {
-            'databaseURL': database_url
+            'databaseURL': db_url
         })
