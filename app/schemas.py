@@ -333,13 +333,15 @@ class EstudianteBasico(BaseModel):
         "from_attributes": True
     }
 
+
 class ParadaResponse(BaseModel):
+    id_parada: int
     orden: int
     latitud: float
     longitud: float
     recogido: bool
     entregado: bool
-    estudiante: Optional[EstudianteSimple] = None 
+    estudiante: Optional[EstudianteSimple] = None
 
     class Config:
         from_attributes = True
@@ -405,6 +407,20 @@ class EstudianteConAsistenciaHoy(BaseModel):
     curso: str
     colegio: str
     asistencia: Optional[AsistenciaHoyResponse] = None
+
+    class Config:
+        from_attributes = True
+        
+        
+class EstudianteHoyConParada(BaseModel):
+    id_estudiante: int
+    nombre: str
+    curso: str
+    colegio: str
+    asistencia: Optional[AsistenciaHoyResponse] = None
+    recogido: Optional[bool] = None
+    entregado: Optional[bool] = None
+    orden: Optional[int] = None
 
     class Config:
         from_attributes = True
