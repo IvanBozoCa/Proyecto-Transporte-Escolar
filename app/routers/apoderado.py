@@ -6,6 +6,8 @@ from app.auth import get_current_user, verificar_admin, verificar_tipo_usuario
 from app import models, schemas
 from typing import List
 from datetime import date
+from fastapi.responses import JSONResponse
+from typing import Union
 
 router = APIRouter(
     prefix="/apoderado",
@@ -53,26 +55,83 @@ def registrar_asistencia(
 
     hoy = date.today()
 
-    # Buscar si ya existe un registro de asistencia para hoy
     registro_existente = db.query(models.Asistencia).filter_by(
         id_estudiante=asistencia.id_estudiante,
         fecha=hoy
     ).first()
 
-    if registro_existente:
-        registro_existente.asiste = asistencia.asiste
+    if asistencia.asiste:
+        # Si ya existe y es False, lo eliminamos para asumir asistencia por defecto
+        if registro_existente:
+            db.delete(registro_existente)
+            db.commit()
+        # Devolvemos asistencia simulada en True
+        return schemas.AsistenciaResponse(
+            id_asistencia=0,
+            id_estudiante=asistencia.id_estudiante,
+            fecha=hoy,
+            asiste=True
+        )
+
+    else:
+        if registro_existente:
+            registro_existente.asiste = False
+            db.commit()
+            db.refresh(registro_existente)
+            return registro_existente
+
+        nuevo = models.Asistencia(
+            id_estudiante=asistencia.id_estudiante,
+            fecha=hoy,
+            asiste=False
+        )
+        db.add(nuevo)
         db.commit()
-        db.refresh(registro_existente)
-        return registro_existente
+        db.refresh(nuevo)
+        return nuevo
 
-    # Si no existe, crearlo
-    nuevo = models.Asistencia(
-        id_estudiante=asistencia.id_estudiante,
-        fecha=hoy,
-        asiste=asistencia.asiste
-    )
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-    return nuevo
 
+
+
+@router.get("/apoderado/mis-estudiantes-hoy", response_model=List[schemas.EstudianteConAsistenciaHoy])
+def listar_estudiantes_apoderado_con_asistencia_hoy(
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "apoderado":
+        raise HTTPException(status_code=403, detail="Solo los apoderados pueden acceder a esta información.")
+
+    apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not apoderado:
+        raise HTTPException(status_code=404, detail="Apoderado no encontrado.")
+
+    estudiantes = apoderado.estudiantes
+    resultado = []
+
+    for est in estudiantes:
+        asistencia_hoy = db.query(models.Asistencia).filter_by(
+            id_estudiante=est.id_estudiante,
+            fecha=date.today()
+        ).first()
+
+        asistencia_schema = schemas.AsistenciaHoyResponse.from_orm(asistencia_hoy) if asistencia_hoy else None
+
+        ruta_resumen = None
+        if est.conductor:
+            ruta_fija = db.query(models.RutaFija).filter_by(id_conductor=est.conductor.id_conductor).first()
+            if ruta_fija:
+                ruta_resumen = schemas.RutaResumen(
+                    id=ruta_fija.id_ruta_fija,
+                    nombre=ruta_fija.nombre
+                )
+
+        resultado.append(schemas.EstudianteConAsistenciaHoy(
+            id_estudiante=est.id_estudiante,
+            nombre=est.nombre,
+            curso=est.curso,
+            colegio=est.colegio,
+            asistencia=asistencia_schema,
+            ruta=ruta_resumen
+        ))
+
+    return resultado

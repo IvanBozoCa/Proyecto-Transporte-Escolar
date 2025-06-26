@@ -401,17 +401,25 @@ class EstudianteConAsistencias(BaseModel):
     class Config:
         from_attributes = True
         
+class RutaResumen(BaseModel):
+    id: int
+    nombre: str
+
+    class Config:
+        from_attributes = True
+        
 class EstudianteConAsistenciaHoy(BaseModel):
     id_estudiante: int
     nombre: str
     curso: str
     colegio: str
     asistencia: Optional[AsistenciaHoyResponse] = None
+    ruta: Optional[RutaResumen] = None 
 
     class Config:
         from_attributes = True
         
-        
+    
 class EstudianteHoyConParada(BaseModel):
     id_estudiante: int
     nombre: str
