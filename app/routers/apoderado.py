@@ -61,25 +61,27 @@ def registrar_asistencia(
     ).first()
 
     if asistencia.asiste:
-        # Si ya existe y es False, lo eliminamos para asumir asistencia por defecto
         if registro_existente:
-            db.delete(registro_existente)
+            registro_existente.asiste = True
             db.commit()
-        # Devolvemos asistencia simulada en True
-        return schemas.AsistenciaResponse(
-            id_asistencia=0,
-            id_estudiante=asistencia.id_estudiante,
-            fecha=hoy,
-            asiste=True
-        )
-
+            db.refresh(registro_existente)
+            return registro_existente
+        else:
+            nuevo = models.Asistencia(
+                id_estudiante=asistencia.id_estudiante,
+                fecha=hoy,
+                asiste=True
+            )
+            db.add(nuevo)
+            db.commit()
+            db.refresh(nuevo)
+            return nuevo
     else:
         if registro_existente:
             registro_existente.asiste = False
             db.commit()
             db.refresh(registro_existente)
             return registro_existente
-
         nuevo = models.Asistencia(
             id_estudiante=asistencia.id_estudiante,
             fecha=hoy,
@@ -93,8 +95,9 @@ def registrar_asistencia(
 
 
 
-@router.get("/apoderado/mis-estudiantes-hoy", response_model=List[schemas.EstudianteConAsistenciaHoy])
-def listar_estudiantes_apoderado_con_asistencia_hoy(
+
+@router.get("/mis-hijos-hoy", response_model=List[schemas.EstudianteConAsistenciaHoy])
+def listar_hijos_con_asistencia(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
@@ -109,21 +112,35 @@ def listar_estudiantes_apoderado_con_asistencia_hoy(
     resultado = []
 
     for est in estudiantes:
-        asistencia_hoy = db.query(models.Asistencia).filter_by(
-            id_estudiante=est.id_estudiante,
-            fecha=date.today()
-        ).first()
+        # Buscar la asistencia más reciente (aunque no sea de hoy)
+        asistencia = (
+            db.query(models.Asistencia)
+            .filter(models.Asistencia.id_estudiante == est.id_estudiante)
+            .order_by(models.Asistencia.fecha.desc())
+            .first()
+        )
 
-        asistencia_schema = schemas.AsistenciaHoyResponse.from_orm(asistencia_hoy) if asistencia_hoy else None
+        if asistencia:
+            asistencia_schema = schemas.AsistenciaHoyResponse.from_orm(asistencia)
+        else:
+            # Si no hay registros, se asume presente por defecto
+            asistencia_schema = schemas.AsistenciaHoyResponse(
+                fecha=date.today(),
+                asiste=True
+            )
 
-        ruta_resumen = None
-        if est.conductor:
-            ruta_fija = db.query(models.RutaFija).filter_by(id_conductor=est.conductor.id_conductor).first()
-            if ruta_fija:
-                ruta_resumen = schemas.RutaResumen(
-                    id=ruta_fija.id_ruta_fija,
-                    nombre=ruta_fija.nombre
-                )
+        # Obtener nombre de la ruta si el estudiante tiene un conductor con ruta fija
+        ruta_fija = (
+            db.query(models.RutaFija)
+            .join(models.Conductor)
+            .filter(models.Conductor.id_conductor == est.id_conductor)
+            .first()
+        )
+
+        ruta_schema = schemas.RutaResumen(
+            id=ruta_fija.id_ruta_fija,
+            nombre=ruta_fija.nombre
+        ) if ruta_fija else None
 
         resultado.append(schemas.EstudianteConAsistenciaHoy(
             id_estudiante=est.id_estudiante,
@@ -131,7 +148,8 @@ def listar_estudiantes_apoderado_con_asistencia_hoy(
             curso=est.curso,
             colegio=est.colegio,
             asistencia=asistencia_schema,
-            ruta=ruta_resumen
+            ruta=ruta_schema
         ))
 
     return resultado
+
