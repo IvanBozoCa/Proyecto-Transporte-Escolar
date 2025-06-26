@@ -86,12 +86,21 @@ def listar_estudiantes_con_asistencia_hoy(
     resultado = []
 
     for est in estudiantes:
-        asistencia_hoy = db.query(models.Asistencia).filter_by(
-            id_estudiante=est.id_estudiante,
-            fecha=date.today()
-        ).first()
+        asistencia = db.query(models.Asistencia).filter_by(
+            id_estudiante=est.id_estudiante
+        ).order_by(models.Asistencia.fecha.desc()).first()
 
-        asistencia_schema = schemas.AsistenciaHoyResponse.from_orm(asistencia_hoy) if asistencia_hoy else None
+        if asistencia:
+            asistencia_schema = schemas.AsistenciaHoyResponse(
+                fecha=asistencia.fecha,
+                asiste=asistencia.asiste
+            )
+        else:
+            # Asistencia implícita (por defecto asiste)
+            asistencia_schema = schemas.AsistenciaHoyResponse(
+                fecha=date.today(),
+                asiste=True
+            )
 
         resultado.append(schemas.EstudianteConAsistenciaHoy(
             id_estudiante=est.id_estudiante,
@@ -103,6 +112,7 @@ def listar_estudiantes_con_asistencia_hoy(
         ))
 
     return resultado
+
 
 
 @router.get("/mis-estudiantes-hoy-detallado", response_model=List[schemas.EstudianteHoyConParada])
