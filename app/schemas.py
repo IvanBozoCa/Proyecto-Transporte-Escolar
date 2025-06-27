@@ -277,7 +277,6 @@ class UbicacionConductorCreate(BaseModel):
     longitud: float
 
 class UbicacionConductorResponse(BaseModel):
-    id_ubicacion: int
     latitud: float
     longitud: float
     timestamp: datetime
