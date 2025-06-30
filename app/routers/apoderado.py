@@ -154,10 +154,9 @@ def listar_hijos_con_asistencia(
     return resultado
 
 
-
-@router.get("/ubicacion-conductor/{id_conductor}", response_model=schemas.UbicacionConductorResponse)
+@router.get("/ubicacion-conductor/{id_usuario}", response_model=schemas.UbicacionConductorResponse)
 def obtener_ubicacion_conductor(
-    id_conductor: int,
+    id_usuario: int,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
@@ -165,11 +164,12 @@ def obtener_ubicacion_conductor(
     if usuario_actual.tipo_usuario not in ["apoderado", "conductor", "administrador"]:
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    conductor = db.query(models.Conductor).filter_by(id_conductor=id_conductor).first()
+    # Buscar al conductor a partir del id_usuario
+    conductor = db.query(models.Conductor).filter_by(id_usuario=id_usuario).first()
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
-    ubicacion = db.query(models.UbicacionConductor).filter_by(id_conductor=id_conductor).first()
+    ubicacion = db.query(models.UbicacionConductor).filter_by(id_conductor=conductor.id_conductor).first()
     if not ubicacion:
         raise HTTPException(status_code=404, detail="Ubicación no encontrada para el conductor")
 
