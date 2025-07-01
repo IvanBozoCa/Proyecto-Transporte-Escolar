@@ -178,3 +178,45 @@ def obtener_ubicacion_conductor(
         longitud=ubicacion.longitud,
         timestamp=ubicacion.timestamp
     )
+
+@router.get("/mi-conductor", response_model=schemas.ConductorConAcompanante)
+def obtener_conductor_asignado(
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "apoderado":
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not apoderado:
+        raise HTTPException(status_code=404, detail="Apoderado no encontrado")
+
+    estudiante = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).first()
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="No se encontró estudiante asociado al apoderado")
+
+    parada = (
+        db.query(models.Parada)
+        .filter_by(id_estudiante=estudiante.id_estudiante)
+        .join(models.Ruta)
+        .first()
+    )
+    if not parada or not parada.ruta:
+        raise HTTPException(status_code=404, detail="No se encontró una ruta asignada al estudiante")
+
+    conductor = parada.ruta.conductor
+    if not conductor or not conductor.usuario:
+        raise HTTPException(status_code=404, detail="Conductor no asignado correctamente")
+
+    return schemas.ConductorConAcompanante(
+    id_usuario=conductor.usuario.id_usuario,
+    nombre=conductor.usuario.nombre,
+    email=conductor.usuario.email,
+    telefono=conductor.usuario.telefono,
+    patente=conductor.patente,
+    modelo_vehiculo=conductor.modelo_vehiculo,
+    acompanante=schemas.NombreAcompanante(
+        nombre_completo=conductor.acompanante.nombre
+    ) if conductor.acompanante else None
+)
+
