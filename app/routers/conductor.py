@@ -424,7 +424,7 @@ def marcar_parada_como_recogida(
             notificaciones.enviar_notificacion(
                 token=token_entry.token,
                 titulo="Estudiante recogido",
-                cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor {conductor.nombre}."
+                cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor {conductor.usuario.nombre}."
             )
 
     return parada
