@@ -590,8 +590,28 @@ def actualizar_ubicacion_conductor(
         raise HTTPException(status_code=404, detail="Conductor no encontrado")
 
     try:
+        # Actualizar en Firebase
         notificaciones.enviar_ubicacion_conductor(conductor.id_conductor, latitud, longitud)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar en Firebase: {str(e)}")
 
-    return {"mensaje": "Ubicación actualizada en Firebase"}
+    # Guardar también en la base de datos
+    ubicacion_existente = db.query(models.UbicacionConductor).filter_by(id_conductor=conductor.id_conductor).first()
+    timestamp_actual = datetime.now()
+
+    if ubicacion_existente:
+        ubicacion_existente.latitud = latitud
+        ubicacion_existente.longitud = longitud
+        ubicacion_existente.timestamp = timestamp_actual
+    else:
+        nueva_ubicacion = models.UbicacionConductor(
+            id_conductor=conductor.id_conductor,
+            latitud=latitud,
+            longitud=longitud,
+            timestamp=timestamp_actual
+        )
+        db.add(nueva_ubicacion)
+
+    db.commit()
+
+    return {"mensaje": "Ubicación actualizada en base de datos y Firebase"}
