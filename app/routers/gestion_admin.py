@@ -10,45 +10,17 @@ from pydantic import EmailStr
 router = APIRouter(prefix="/admin", tags=["Administrador"])
 # ---------- CREAR ADMIN ----------
 
-@router.post("/admin", response_model=schemas.UsuarioResponse)
-def crear_admin_manual(
-    nombre: str = Body(...),
-    email: EmailStr = Body(...),
-    telefono: str = Body(...),
-    contrasena: str = Body(..., min_length=8),
-    clave_secreta: str = Body(...),
-    db: Session = Depends(get_db)
-):
-    if clave_secreta != "CLAVE_ULTRA_SECRETA":
-        raise HTTPException(status_code=401, detail="Clave incorrecta")
-
-    if db.query(models.Usuario).filter_by(email=email).first():
-        raise HTTPException(status_code=400, detail="Correo ya registrado")
-
-    nuevo_admin = models.Usuario(
-        nombre=nombre,
-        email=email,
-        telefono=telefono,
-        contrasena=hash_contrasena(contrasena),
-        tipo_usuario="administrador"
-    )
-    db.add(nuevo_admin)
-    db.commit()
-    db.refresh(nuevo_admin)
-    return nuevo_admin
-
-# ---------- CREAR APODERADO + ESTUDIANTE ----------
-
-@router.post("/apoderado", response_model=schemas.ApoderadoYEstudianteResponse)
+@router.post("/admin/apoderado", response_model=schemas.ApoderadoYEstudianteResponse)
 def crear_apoderado_con_estudiante(
     datos: schemas.ApoderadoYEstudiantecreate,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(verificar_admin)
 ):
+    # Validar que el correo no esté en uso
     if db.query(models.Usuario).filter_by(email=datos.apoderado.email).first():
         raise HTTPException(status_code=400, detail="Correo ya registrado")
 
-    # Crear usuario del apoderado
+    # Crear el usuario apoderado
     nuevo_usuario = models.Usuario(
         nombre=datos.apoderado.nombre,
         email=datos.apoderado.email,
@@ -60,13 +32,13 @@ def crear_apoderado_con_estudiante(
     db.commit()
     db.refresh(nuevo_usuario)
 
-    # Crear apoderado
+    # Crear entidad Apoderado
     nuevo_apoderado = models.Apoderado(id_usuario=nuevo_usuario.id_usuario)
     db.add(nuevo_apoderado)
     db.commit()
     db.refresh(nuevo_apoderado)
 
-    # Buscar id_conductor desde el id_usuario_conductor (si se entregó)
+    # Buscar id_conductor desde id_usuario_conductor (opcional)
     id_conductor_final = None
     if datos.estudiante.id_usuario_conductor:
         conductor = db.query(models.Conductor).filter_by(id_usuario=datos.estudiante.id_usuario_conductor).first()
@@ -94,6 +66,13 @@ def crear_apoderado_con_estudiante(
     db.commit()
     db.refresh(nuevo_estudiante)
 
+    # Obtener id_usuario del conductor para incluir en el response
+    usuario_conductor = None
+    if nuevo_estudiante.id_conductor:
+        conductor_asociado = db.query(models.Conductor).filter_by(id_conductor=nuevo_estudiante.id_conductor).first()
+        if conductor_asociado:
+            usuario_conductor = conductor_asociado.id_usuario
+
     return schemas.ApoderadoYEstudianteResponse(
         apoderado=schemas.UsuarioResponse(
             id_usuario=nuevo_usuario.id_usuario,
@@ -115,10 +94,9 @@ def crear_apoderado_con_estudiante(
             long_colegio=nuevo_estudiante.long_colegio,
             nombre_apoderado_secundario=nuevo_estudiante.nombre_apoderado_secundario,
             telefono_apoderado_secundario=nuevo_estudiante.telefono_apoderado_secundario,
-            id_conductor=nuevo_estudiante.id_conductor
+            id_usuario_conductor=usuario_conductor  
         )
     )
-
 
 # ---------- ACOMPAÑANTE ----------
 
@@ -512,22 +490,24 @@ def editar_acompanante(
     db.refresh(acompanante)
     return acompanante
 
-
-@router.put("/apoderado/{id_usuario}", response_model=schemas.ApoderadoYEstudianteResponse)
+@router.put("/admin/apoderado/{id_usuario}", response_model=schemas.ApoderadoYEstudianteResponse)
 def editar_apoderado_con_estudiante(
     id_usuario: int,
     datos: schemas.ApoderadoYEstudiante,
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
+    # Buscar apoderado
     apoderado = db.query(models.Apoderado).filter_by(id_usuario=id_usuario).first()
     if not apoderado:
         raise HTTPException(status_code=404, detail="Apoderado no encontrado")
 
+    # Buscar usuario asociado
     usuario = db.query(models.Usuario).filter_by(id_usuario=apoderado.id_usuario).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
 
+    # Verificar duplicidad de correo
     email_existente = db.query(models.Usuario).filter(
         models.Usuario.email == datos.apoderado.email,
         models.Usuario.id_usuario != usuario.id_usuario
@@ -535,11 +515,15 @@ def editar_apoderado_con_estudiante(
     if email_existente:
         raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
 
+    # Actualizar datos del usuario
     usuario.nombre = datos.apoderado.nombre
     usuario.email = datos.apoderado.email
     usuario.telefono = datos.apoderado.telefono
 
+    # Buscar estudiante
     estudiante = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).first()
+    usuario_conductor = None
+
     if estudiante:
         estudiante.nombre = datos.estudiante.nombre
         estudiante.edad = datos.estudiante.edad
@@ -552,12 +536,19 @@ def editar_apoderado_con_estudiante(
         estudiante.lat_colegio = datos.estudiante.lat_colegio
         estudiante.long_colegio = datos.estudiante.long_colegio
 
-        # Si se proporciona el ID del usuario conductor, validarlo y asignarlo
+        # Actualizar conductor si se proporciona
         if datos.estudiante.id_usuario_conductor is not None:
             conductor = db.query(models.Conductor).filter_by(id_usuario=datos.estudiante.id_usuario_conductor).first()
             if not conductor:
                 raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
             estudiante.id_conductor = conductor.id_conductor
+            usuario_conductor = conductor.id_usuario
+
+        # Si ya tiene un conductor asignado, recuperar su id_usuario también
+        elif estudiante.id_conductor:
+            conductor_existente = db.query(models.Conductor).filter_by(id_conductor=estudiante.id_conductor).first()
+            if conductor_existente:
+                usuario_conductor = conductor_existente.id_usuario
 
     db.commit()
     db.refresh(usuario)
@@ -566,8 +557,23 @@ def editar_apoderado_con_estudiante(
 
     return schemas.ApoderadoYEstudianteResponse(
         apoderado=schemas.UsuarioResponse.from_orm(usuario),
-        estudiante=schemas.EstudianteResponse.from_orm(estudiante) if estudiante else None
+        estudiante=schemas.EstudianteResponse(
+            id_estudiante=estudiante.id_estudiante,
+            nombre=estudiante.nombre,
+            edad=estudiante.edad,
+            curso=estudiante.curso,
+            colegio=estudiante.colegio,
+            casa=estudiante.casa,
+            lat_casa=estudiante.lat_casa,
+            long_casa=estudiante.long_casa,
+            lat_colegio=estudiante.lat_colegio,
+            long_colegio=estudiante.long_colegio,
+            nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+            telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+            id_usuario_conductor=usuario_conductor
+        ) if estudiante else None
     )
+
 
 
 @router.put("/conductor/{id_usuario}", response_model=schemas.ConductorCompletoResponse)
