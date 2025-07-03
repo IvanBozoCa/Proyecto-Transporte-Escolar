@@ -226,7 +226,7 @@ def asignar_acompanante_a_conductor(
 
 # ---------- ELIMINACIONES ----------
 
-@router.delete("/apoderado")
+@router.delete("/apoderado/{id_usuario}")
 def eliminar_apoderado(id_usuario: int, db: Session = Depends(get_db), _: models.Usuario = Depends(verificar_admin)):
     usuario = db.query(models.Usuario).filter_by(id_usuario=id_usuario, tipo_usuario="apoderado").first()
     if not usuario:
@@ -235,7 +235,7 @@ def eliminar_apoderado(id_usuario: int, db: Session = Depends(get_db), _: models
     db.commit()
     return {"mensaje": "Apoderado eliminado"}
 
-@router.delete("/Estudiante")
+@router.delete("/Estudiante/{id_estudiante}")
 def eliminar_estudiante(id_estudiante: int, db: Session = Depends(get_db), _: models.Usuario = Depends(verificar_admin)):
     estudiante = db.query(models.Estudiante).filter_by(id_estudiante=id_estudiante).first()
     if not estudiante:
@@ -244,7 +244,7 @@ def eliminar_estudiante(id_estudiante: int, db: Session = Depends(get_db), _: mo
     db.commit()
     return {"mensaje": "Estudiante eliminado"}
 
-@router.delete("/Conductor")
+@router.delete("/Conductor/{id_usuario}")
 def eliminar_conductor(id_usuario: int, db: Session = Depends(get_db), _: models.Usuario = Depends(verificar_admin)):
     usuario = db.query(models.Usuario).filter_by(id_usuario=id_usuario, tipo_usuario="conductor").first()
     if not usuario:
@@ -253,7 +253,7 @@ def eliminar_conductor(id_usuario: int, db: Session = Depends(get_db), _: models
     db.commit()
     return {"mensaje": "Conductor eliminado"}
 
-@router.delete("/Acompanante")
+@router.delete("/Acompanante/{id_acompanante}")
 def eliminar_acompanante(id_acompanante: int, db: Session = Depends(get_db), _: models.Usuario = Depends(verificar_admin)):
     acompanante = db.query(models.Acompanante).filter_by(id_acompanante=id_acompanante).first()
     if not acompanante:
@@ -272,7 +272,7 @@ def listar_acompanantes(
 ):
     return db.query(models.Acompanante).all()
 
-@router.get("/conductor", response_model=schemas.ConductorCompletoResponse)
+@router.get("/conductor/{id_usuario}", response_model=schemas.ConductorCompletoResponse)
 def obtener_conductor_completo(
     id_usuario: int,
     db: Session = Depends(get_db),
@@ -417,7 +417,7 @@ def listar_todos_los_usuarios(
 
     return resultado
 
-@router.get("/apoderado", response_model=schemas.ApoderadoConEstudiantes)
+@router.get("/apoderado/{id_usuario}", response_model=schemas.ApoderadoConEstudiantes)
 def obtener_apoderado_por_id(
     id_usuario: int,
     db: Session = Depends(get_db),
@@ -455,7 +455,7 @@ def obtener_apoderado_por_id(
     )
 
 
-@router.put("/usuario", response_model=schemas.UsuarioResponse)
+@router.put("/usuario/{id_usuario}", response_model=schemas.UsuarioResponse)
 def editar_usuario(
     id_usuario: int,
     cambios: schemas.UsuarioUpdate,
@@ -476,7 +476,7 @@ def editar_usuario(
     db.refresh(usuario)
     return usuario
 
-@router.put("/estudiante", response_model=schemas.EstudianteResponse)
+@router.put("/estudiante/{id_estudiante}", response_model=schemas.EstudianteResponse)
 def editar_estudiante(
     id_estudiante: int,
     cambios: schemas.EstudianteUpdate,
@@ -494,7 +494,7 @@ def editar_estudiante(
     db.refresh(estudiante)
     return estudiante
 
-@router.put("/acompanante", response_model=schemas.AcompananteResponse)
+@router.put("/acompanante/{id_acompanante}", response_model=schemas.AcompananteResponse)
 def editar_acompanante(
     id_acompanante: int,
     cambios: schemas.AcompananteUpdate,
@@ -513,7 +513,7 @@ def editar_acompanante(
     return acompanante
 
 
-@router.put("/apoderado", response_model=schemas.ApoderadoYEstudianteResponse)
+@router.put("/apoderado/{id_usuario}", response_model=schemas.ApoderadoYEstudianteResponse)
 def editar_apoderado_con_estudiante(
     id_usuario: int,
     datos: schemas.ApoderadoYEstudiante,
@@ -570,7 +570,7 @@ def editar_apoderado_con_estudiante(
     )
 
 
-@router.put("/conductor", response_model=schemas.ConductorCompletoResponse)
+@router.put("/conductor/{id_usuario}", response_model=schemas.ConductorCompletoResponse)
 def editar_conductor_completo(
     id_usuario: int,
     datos: schemas.ConductorCompletoupdate,

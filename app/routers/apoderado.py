@@ -154,7 +154,7 @@ def listar_hijos_con_asistencia(
     return resultado
 
 
-@router.get("/ubicacionConductor", response_model=schemas.UbicacionConductorResponse)
+@router.get("/ubicacionConductor/{id_usuario}", response_model=schemas.UbicacionConductorResponse)
 def obtener_ubicacion_conductor(
     id_usuario: int,
     db: Session = Depends(get_db),

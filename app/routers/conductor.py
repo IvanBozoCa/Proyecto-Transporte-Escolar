@@ -229,7 +229,7 @@ def obtener_mis_rutas_fijas(
 
     return resultado
 
-@router.post("/GenerarRuta", response_model=schemas.RutaConParadasResponse)
+@router.post("/GenerarRuta/{id_ruta_fija}", response_model=schemas.RutaConParadasResponse)
 def generar_ruta_dia(
     id_ruta_fija: int,
     db: Session = Depends(get_db),
@@ -385,7 +385,7 @@ def finalizar_ruta(
 
 
 
-@router.put("/recogerEstudiante", response_model=schemas.ParadaResponse)
+@router.put("/recogerEstudiante/{id_estudiante}", response_model=schemas.ParadaResponse)
 def marcar_parada_como_recogida(
     id_estudiante: int,
     db: Session = Depends(get_db),
@@ -497,7 +497,7 @@ def recalcular_ruta_dia(
         paradas=parada_responses
     )
 
-@router.get("/parada", response_model=schemas.ParadaResponse)
+@router.get("/parada/{id_parada}", response_model=schemas.ParadaResponse)
 def obtener_parada_por_id(
     id_parada: int,
     db: Session = Depends(get_db),
@@ -521,7 +521,7 @@ def obtener_parada_por_id(
     return parada
 
 
-@router.put("/entregarEstudiante", response_model=schemas.ParadaResponse)
+@router.put("/entregarEstudiante/{id_estudiante}", response_model=schemas.ParadaResponse)
 def entregar_estudiante(
     id_estudiante: int,
     db: Session = Depends(get_db),

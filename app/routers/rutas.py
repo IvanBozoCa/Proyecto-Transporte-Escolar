@@ -146,7 +146,7 @@ def obtener_rutas_fijas_completas(
 
     return resultados
 
-@router.get("/RutaFija", response_model=schemas.RutaFijaResponse)
+@router.get("/RutaFija/{id_ruta_fija}", response_model=schemas.RutaFijaResponse)
 def obtener_ruta_fija_por_id(
     id_ruta_fija: int,
     db: Session = Depends(get_db),
@@ -193,7 +193,7 @@ def obtener_ruta_fija_por_id(
     )
 
 
-@router.put("/RutaFija", response_model=schemas.RutaFijaResponse)
+@router.put("/RutaFija/{id_ruta_fija}", response_model=schemas.RutaFijaResponse)
 def editar_ruta_fija(
     id_ruta_fija: int,
     datos: schemas.RutaFijaUpdate,
@@ -294,7 +294,7 @@ def editar_ruta_fija(
 
 
 
-@router.delete("/RutaFija", status_code=204)
+@router.delete("/RutaFija/{id_ruta_fija}", status_code=204)
 def eliminar_ruta_fija(
     id_ruta_fija: int,
     db: Session = Depends(get_db),
