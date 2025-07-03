@@ -13,7 +13,7 @@ router = APIRouter(
     prefix="/apoderado",
     tags=["Apoderado"]
 )
-@router.get("/perfil", response_model=schemas.ApoderadoResponse)
+@router.get("/me", response_model=schemas.ApoderadoResponse)
 def obtener_mi_perfil_completo(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
@@ -96,7 +96,7 @@ def registrar_asistencia(
 
 
 
-@router.get("/mis-hijos-hoy", response_model=List[schemas.EstudianteConAsistenciaHoy])
+@router.get("/hijos", response_model=List[schemas.EstudianteConAsistenciaHoy])
 def listar_hijos_con_asistencia(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
@@ -154,7 +154,7 @@ def listar_hijos_con_asistencia(
     return resultado
 
 
-@router.get("/ubicacion-conductor/{id_usuario}", response_model=schemas.UbicacionConductorResponse)
+@router.get("/ubicacionConductor", response_model=schemas.UbicacionConductorResponse)
 def obtener_ubicacion_conductor(
     id_usuario: int,
     db: Session = Depends(get_db),
@@ -179,7 +179,7 @@ def obtener_ubicacion_conductor(
         timestamp=ubicacion.timestamp
     )
 
-@router.get("/mi-conductor", response_model=schemas.ConductorConAcompanante)
+@router.get("/conductor", response_model=schemas.ConductorConAcompanante)
 def obtener_conductor_asignado(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)

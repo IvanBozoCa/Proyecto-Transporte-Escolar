@@ -65,7 +65,7 @@ class EstudianteCreate(BaseModel):
     curso: Optional[str] = None
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
-
+    id_usuario_conductor: Optional[int]
 
 class EstudianteResponse(BaseModel):
     id_estudiante: int
@@ -80,7 +80,7 @@ class EstudianteResponse(BaseModel):
     long_colegio: Optional[float]
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
-
+    id_usuario_conductor: Optional[int]
     class Config:
         from_attributes = True
 
@@ -96,7 +96,8 @@ class EstudianteUpdate(BaseModel):
     long_colegio: Optional[float]
     nombre_apoderado_secundario: Optional[str]
     telefono_apoderado_secundario: Optional[str]
-
+    id_usuario_conductor: Optional[int]
+    
 class EstudianteSimple(BaseModel):
     id_estudiante: int
     nombre: str
@@ -111,7 +112,7 @@ class EstudianteSimple(BaseModel):
     long_colegio: Optional[float]= None
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
-
+    
     class Config:
         from_attributes = True
 

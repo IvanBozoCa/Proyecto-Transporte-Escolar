@@ -7,8 +7,8 @@ from app.auth import get_current_user, verificar_admin
 from datetime import datetime
 from sqlalchemy import func
 
-router = APIRouter(prefix="/rutas-fijas", tags=["Rutas Fijas"])
-@router.post("/ruta-fija", response_model=schemas.RutaFijaResponse)
+router = APIRouter(prefix="/Rutas", tags=["Rutas Fijas"])
+@router.post("/RutaFija", response_model=schemas.RutaFijaResponse)
 def crear_ruta_fija(
     ruta: schemas.RutaFijaCreate,
     db: Session = Depends(get_db),
@@ -97,7 +97,7 @@ def crear_ruta_fija(
 
 
 
-@router.get("/rutas-fijas", response_model=list[schemas.RutaFijaResponse])
+@router.get("/RutasFijas", response_model=list[schemas.RutaFijaResponse])
 def obtener_rutas_fijas_completas(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
@@ -146,9 +146,54 @@ def obtener_rutas_fijas_completas(
 
     return resultados
 
+@router.get("/RutaFija", response_model=schemas.RutaFijaResponse)
+def obtener_ruta_fija_por_id(
+    id_ruta_fija: int,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    ruta = db.query(models.RutaFija).filter_by(id_ruta_fija=id_ruta_fija).first()
+    if not ruta:
+        raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
+
+    paradas_db = (
+        db.query(models.ParadaRutaFija)
+        .filter_by(id_ruta_fija=id_ruta_fija)
+        .order_by(models.ParadaRutaFija.orden)
+        .all()
+    )
+
+    paradas_estudiantes = []
+    parada_final = None
+
+    for parada in paradas_db:
+        if parada.es_destino_final:
+            parada_final = schemas.ParadaFinalRutaFijaResponse(
+                id_parada_ruta_fija=parada.id_parada_ruta_fija,
+                orden=parada.orden,
+                latitud=parada.latitud,
+                longitud=parada.longitud
+            )
+        else:
+            paradas_estudiantes.append(
+                schemas.ParadaEstudianteRutaFijaResponse(
+                    id_parada_ruta_fija=parada.id_parada_ruta_fija,
+                    orden=parada.orden,
+                    estudiante=schemas.EstudianteBasico.from_orm(parada.estudiante)
+                )
+            )
+
+    return schemas.RutaFijaResponse(
+        id_ruta_fija=ruta.id_ruta_fija,
+        nombre=ruta.nombre,
+        descripcion=ruta.descripcion,
+        id_conductor=ruta.id_conductor,
+        paradas=paradas_estudiantes,
+        parada_final=parada_final
+    )
 
 
-@router.put("/rutas-fijas/{id_ruta_fija}", response_model=schemas.RutaFijaResponse)
+@router.put("/RutaFija", response_model=schemas.RutaFijaResponse)
 def editar_ruta_fija(
     id_ruta_fija: int,
     datos: schemas.RutaFijaUpdate,
@@ -249,7 +294,7 @@ def editar_ruta_fija(
 
 
 
-@router.delete("/rutas-fijas/{id_ruta_fija}", status_code=204)
+@router.delete("/RutaFija", status_code=204)
 def eliminar_ruta_fija(
     id_ruta_fija: int,
     db: Session = Depends(get_db),

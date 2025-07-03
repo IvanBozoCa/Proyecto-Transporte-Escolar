@@ -47,7 +47,7 @@ def obtener_mi_info_conductor(
     )
     
     
-@router.get("/mis-estudiantes", response_model=List[schemas.EstudianteResponse])
+@router.get("/estudiantes", response_model=List[schemas.EstudianteResponse])
 def obtener_estudiantes_conductor(
     usuario_actual: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -64,7 +64,7 @@ def obtener_estudiantes_conductor(
     return estudiantes
 
 
-@router.get("/mis-estudiantes-hoy", response_model=List[schemas.EstudianteConAsistenciaHoy])
+@router.get("/asistenciaEstudiantes", response_model=List[schemas.EstudianteConAsistenciaHoy])
 def listar_estudiantes_con_asistencia_hoy(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
@@ -115,7 +115,7 @@ def listar_estudiantes_con_asistencia_hoy(
 
 
 
-@router.get("/mis-estudiantes-hoy-detallado", response_model=List[schemas.EstudianteHoyConParada])
+@router.get("/estudiantesenRutaActiva", response_model=List[schemas.EstudianteHoyConParada])
 def listar_estudiantes_en_ruta_activa(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
@@ -170,7 +170,7 @@ def listar_estudiantes_en_ruta_activa(
     return resultado
 
 
-@router.get("/mis-rutas-fijas", response_model=List[schemas.RutaFijaResponse])
+@router.get("/RutasFijas", response_model=List[schemas.RutaFijaResponse])
 def obtener_mis_rutas_fijas(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
@@ -229,7 +229,7 @@ def obtener_mis_rutas_fijas(
 
     return resultado
 
-@router.post("/generar-ruta-dia/{id_ruta_fija}", response_model=schemas.RutaConParadasResponse)
+@router.post("/GenerarRuta", response_model=schemas.RutaConParadasResponse)
 def generar_ruta_dia(
     id_ruta_fija: int,
     db: Session = Depends(get_db),
@@ -359,7 +359,7 @@ def generar_ruta_dia(
 
 
 
-@router.put("/ruta/finalizar")
+@router.put("/FinalizarRuta")
 def finalizar_ruta(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
@@ -385,7 +385,7 @@ def finalizar_ruta(
 
 
 
-@router.put("/parada/{id_estudiante}/recoger", response_model=schemas.ParadaResponse)
+@router.put("/recogerEstudiante", response_model=schemas.ParadaResponse)
 def marcar_parada_como_recogida(
     id_estudiante: int,
     db: Session = Depends(get_db),
@@ -431,7 +431,7 @@ def marcar_parada_como_recogida(
 
 
 
-@router.put("/recalcular-ruta-dia", response_model=schemas.RutaConParadasResponse)
+@router.put("/RecalcularRutaActiva", response_model=schemas.RutaConParadasResponse)
 def recalcular_ruta_dia(
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
@@ -497,7 +497,7 @@ def recalcular_ruta_dia(
         paradas=parada_responses
     )
 
-@router.get("/parada/{id_parada}", response_model=schemas.ParadaResponse)
+@router.get("/parada", response_model=schemas.ParadaResponse)
 def obtener_parada_por_id(
     id_parada: int,
     db: Session = Depends(get_db),
@@ -521,7 +521,7 @@ def obtener_parada_por_id(
     return parada
 
 
-@router.put("/parada/{id_estudiante}/entregar", response_model=schemas.ParadaResponse)
+@router.put("/entregarEstudiante", response_model=schemas.ParadaResponse)
 def entregar_estudiante(
     id_estudiante: int,
     db: Session = Depends(get_db),
@@ -575,7 +575,7 @@ def entregar_estudiante(
 
 
 
-@router.put("/conductor/ubicacion")
+@router.put("/ubicacion")
 def actualizar_ubicacion_conductor(
     latitud: float = Query(..., description="Latitud actual del conductor"),
     longitud: float = Query(..., description="Longitud actual del conductor"),
