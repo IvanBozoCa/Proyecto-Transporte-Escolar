@@ -61,7 +61,27 @@ def obtener_estudiantes_conductor(
 
     estudiantes = db.query(models.Estudiante).filter_by(id_conductor=conductor.id_conductor).all()
 
-    return estudiantes
+    estudiantes_response = [
+        schemas.EstudianteResponse(
+            id_estudiante=e.id_estudiante,
+            nombre=e.nombre,
+            edad=e.edad,
+            curso=e.curso,
+            casa=e.casa,
+            lat_casa=e.lat_casa,
+            long_casa=e.long_casa,
+            colegio=e.colegio,
+            lat_colegio=e.lat_colegio,
+            long_colegio=e.long_colegio,
+            nombre_apoderado_secundario=e.nombre_apoderado_secundario,
+            telefono_apoderado_secundario=e.telefono_apoderado_secundario,
+            id_conductor=e.id_conductor,
+            id_usuario_conductor=e.conductor.id_usuario if e.conductor else None
+        )
+        for e in estudiantes
+    ]
+
+    return estudiantes_response
 
 
 @router.get("/asistenciaEstudiantes", response_model=List[schemas.EstudianteConAsistenciaHoy])
@@ -342,7 +362,8 @@ def generar_ruta_dia(
                     lat_colegio=estudiante.lat_colegio,
                     long_colegio=estudiante.long_colegio,
                     nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
-                    telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario
+                    telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+                    id_usuario_conductor=estudiante.id_conductor
                 ) if estudiante else None
             )
         )
@@ -427,7 +448,30 @@ def marcar_parada_como_recogida(
                 cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor {conductor.usuario.nombre}."
             )
 
-    return parada
+    return schemas.ParadaResponse(
+    id_parada=parada.id_parada,
+    orden=parada.orden,
+    latitud=parada.latitud,
+    longitud=parada.longitud,
+    recogido=parada.recogido,
+    entregado=parada.entregado,
+    estudiante=schemas.EstudianteResponse(
+        id_estudiante=estudiante.id_estudiante,
+        nombre=estudiante.nombre,
+        edad=estudiante.edad,
+        colegio=estudiante.colegio,
+        curso=estudiante.curso,
+        casa=estudiante.casa,
+        lat_casa=estudiante.lat_casa,
+        long_casa=estudiante.long_casa,
+        lat_colegio=estudiante.lat_colegio,
+        long_colegio=estudiante.long_colegio,
+        nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+        telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+        id_usuario_conductor=estudiante.conductor.id_usuario if estudiante.conductor else None
+    )
+)
+
 
 
 
@@ -518,7 +562,32 @@ def obtener_parada_por_id(
     if parada.ruta.id_conductor != conductor.id_conductor:
         raise HTTPException(status_code=403, detail="Esta parada no pertenece a tu ruta")
 
-    return parada
+    estudiante = parada.estudiante
+
+    return schemas.ParadaResponse(
+        id_parada=parada.id_parada,
+        orden=parada.orden,
+        latitud=parada.latitud,
+        longitud=parada.longitud,
+        recogido=parada.recogido,
+        entregado=parada.entregado,
+        estudiante=schemas.EstudianteResponse(
+            id_estudiante=estudiante.id_estudiante,
+            nombre=estudiante.nombre,
+            edad=estudiante.edad,
+            colegio=estudiante.colegio,
+            curso=estudiante.curso,
+            casa=estudiante.casa,
+            lat_casa=estudiante.lat_casa,
+            long_casa=estudiante.long_casa,
+            lat_colegio=estudiante.lat_colegio,
+            long_colegio=estudiante.long_colegio,
+            nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+            telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+            id_usuario_conductor=estudiante.conductor.id_usuario if estudiante.conductor else None
+        )
+    )
+
 
 
 @router.put("/entregarEstudiante/{id_estudiante}", response_model=schemas.ParadaResponse)
@@ -571,7 +640,30 @@ def entregar_estudiante(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error al notificar finalización: {str(e)}")
 
-    return parada
+    return schemas.ParadaResponse(
+    id_parada=parada.id_parada,
+    orden=parada.orden,
+    latitud=parada.latitud,
+    longitud=parada.longitud,
+    recogido=parada.recogido,
+    entregado=parada.entregado,
+    estudiante=schemas.EstudianteResponse(
+        id_estudiante=estudiante.id_estudiante,
+        nombre=estudiante.nombre,
+        edad=estudiante.edad,
+        colegio=estudiante.colegio,
+        curso=estudiante.curso,
+        casa=estudiante.casa,
+        lat_casa=estudiante.lat_casa,
+        long_casa=estudiante.long_casa,
+        lat_colegio=estudiante.lat_colegio,
+        long_colegio=estudiante.long_colegio,
+        nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+        telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+        id_usuario_conductor=estudiante.conductor.id_usuario if estudiante.conductor else None
+    )
+)
+
 
 
 
