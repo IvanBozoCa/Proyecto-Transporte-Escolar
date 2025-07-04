@@ -395,7 +395,7 @@ def listar_todos_los_usuarios(
 
     return resultado
 
-@router.get("/apoderado/{id_usuario}", response_model=schemas.ApoderadoConEstudiantes)
+@router.get("/admin/apoderado/{id_usuario}", response_model=schemas.ApoderadoConEstudiantes)
 def obtener_apoderado_por_id(
     id_usuario: int,
     db: Session = Depends(get_db),
@@ -405,24 +405,29 @@ def obtener_apoderado_por_id(
     if not apoderado:
         raise HTTPException(status_code=404, detail="Apoderado no encontrado")
 
-    usuario = apoderado.usuario
+    usuario = apoderado.usuario 
 
-    estudiantes = [
-        schemas.EstudianteSimple(
-            id_estudiante=e.id_estudiante,
-            nombre=e.nombre,
-            edad=e.edad,
-            curso=e.curso,
-            casa=e.casa,
-            lat_casa=e.lat_casa,
-            long_casa=e.long_casa,
-            colegio=e.colegio,
-            lat_colegio=e.lat_colegio,
-            long_colegio=e.long_colegio,
-            id_usuario_conductor=e.conductor.id_usuario if e.conductor else None
+    estudiantes = []
+    for e in apoderado.estudiantes:
+        id_usuario_conductor = None
+        if e.conductor:
+            id_usuario_conductor = e.conductor.id_usuario
+
+        estudiantes.append(
+            schemas.EstudianteSimple(
+                id_estudiante=e.id_estudiante,
+                nombre=e.nombre,
+                edad=e.edad,
+                curso=e.curso,
+                casa=e.casa,
+                lat_casa=e.lat_casa,
+                long_casa=e.long_casa,
+                colegio=e.colegio,
+                lat_colegio=e.lat_colegio,
+                long_colegio=e.long_colegio,
+                id_usuario_conductor=id_usuario_conductor
+            )
         )
-        for e in apoderado.estudiantes
-    ]
 
     return schemas.ApoderadoConEstudiantes(
         id_usuario=usuario.id_usuario,

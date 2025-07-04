@@ -112,7 +112,7 @@ class EstudianteSimple(BaseModel):
     long_colegio: Optional[float]= None
     nombre_apoderado_secundario: Optional[str] = None
     telefono_apoderado_secundario: Optional[str] = None
-    
+    id_usuario_conductor: Optional[int]
     class Config:
         from_attributes = True
 
