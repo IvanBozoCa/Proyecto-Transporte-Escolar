@@ -16,7 +16,11 @@ def crear_ruta_fija(
 ):
     if usuario_actual.tipo_usuario != "administrador":
         raise HTTPException(status_code=403, detail="Solo administradores pueden crear rutas fijas.")
-
+    
+    conductor = db.query(models.Conductor).filter_by(id_conductor=ruta.id_conductor).first()
+    if not conductor:
+        raise HTTPException(status_code=404, detail=f"No existe un conductor con id {ruta.id_conductor}")
+    
     nueva_ruta = models.RutaFija(
         id_conductor=ruta.id_conductor,
         nombre=ruta.nombre,
@@ -210,6 +214,13 @@ def editar_ruta_fija(
     if datos.descripcion is not None:
         ruta.descripcion = datos.descripcion
 
+    # Actualizar el conductor si se proporciona
+    if datos.id_conductor is not None:
+        conductor = db.query(models.Conductor).filter_by(id_conductor=datos.id_conductor).first()
+        if not conductor:
+            raise HTTPException(status_code=404, detail="Conductor no encontrado")
+        ruta.id_conductor = datos.id_conductor
+
     # Eliminar paradas antiguas
     db.query(models.ParadaRutaFija).filter_by(id_ruta_fija=id_ruta_fija).delete()
 
@@ -291,7 +302,6 @@ def editar_ruta_fija(
         paradas=paradas_estudiantes,
         parada_final=parada_final
     )
-
 
 
 @router.delete("/RutaFija/{id_ruta_fija}", status_code=204)
