@@ -10,7 +10,7 @@ from pydantic import EmailStr
 router = APIRouter(prefix="/admin", tags=["Administrador"])
 # ---------- CREAR ADMIN ----------
 
-@router.post("/admin/apoderado", response_model=schemas.ApoderadoYEstudianteResponse)
+@router.post("/apoderado", response_model=schemas.ApoderadoYEstudianteResponse)
 def crear_apoderado_con_estudiante(
     datos: schemas.ApoderadoYEstudiantecreate,
     db: Session = Depends(get_db),
@@ -294,7 +294,26 @@ def obtener_apoderados_con_estudiantes(
         if not apoderado:
             continue
 
-        estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
+        estudiantes_orm = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
+
+        estudiantes = [
+            schemas.EstudianteSimple(
+                id_estudiante=e.id_estudiante,
+                nombre=e.nombre,
+                edad=e.edad,
+                curso=e.curso,
+                casa=e.casa,
+                lat_casa=e.lat_casa,
+                long_casa=e.long_casa,
+                colegio=e.colegio,
+                lat_colegio=e.lat_colegio,
+                long_colegio=e.long_colegio,
+                nombre_apoderado_secundario=e.nombre_apoderado_secundario,
+                telefono_apoderado_secundario=e.telefono_apoderado_secundario,
+                id_usuario_conductor=e.conductor.usuario.id_usuario if e.conductor and e.conductor.usuario else None
+            )
+            for e in estudiantes_orm
+        ]
 
         resultado.append(schemas.ApoderadoConEstudiantes(
             id_usuario=usuario.id_usuario,
@@ -302,10 +321,10 @@ def obtener_apoderados_con_estudiantes(
             email=usuario.email,
             telefono=usuario.telefono,
             estudiantes=estudiantes
-            
         ))
 
     return resultado
+
 @router.get("/conductores", response_model=List[schemas.ConductorConAcompanante])
 def obtener_conductores_con_acompanante(
     db: Session = Depends(get_db),
@@ -395,7 +414,7 @@ def listar_todos_los_usuarios(
 
     return resultado
 
-@router.get("/admin/apoderado/{id_usuario}", response_model=schemas.ApoderadoConEstudiantes)
+@router.get("/apoderado/{id_usuario}", response_model=schemas.ApoderadoConEstudiantes)
 def obtener_apoderado_por_id(
     id_usuario: int,
     db: Session = Depends(get_db),
@@ -495,7 +514,7 @@ def editar_acompanante(
     db.refresh(acompanante)
     return acompanante
 
-@router.put("/admin/apoderado/{id_usuario}", response_model=schemas.ApoderadoYEstudianteResponse)
+@router.put("/apoderado/{id_usuario}", response_model=schemas.ApoderadoYEstudianteResponse)
 def editar_apoderado_con_estudiante(
     id_usuario: int,
     datos: schemas.ApoderadoYEstudiante,
