@@ -27,6 +27,25 @@ def obtener_mi_perfil_completo(
 
     estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
 
+    estudiantes_response = [
+        schemas.EstudianteSimple(
+            id_estudiante=est.id_estudiante,
+            nombre=est.nombre,
+            edad=est.edad,
+            colegio=est.colegio,
+            curso=est.curso,
+            casa=est.casa,
+            lat_casa=est.lat_casa,
+            long_casa=est.long_casa,
+            lat_colegio=est.lat_colegio,
+            long_colegio=est.long_colegio,
+            nombre_apoderado_secundario=est.nombre_apoderado_secundario,
+            telefono_apoderado_secundario=est.telefono_apoderado_secundario,
+            id_usuario_conductor=est.conductor.id_usuario if est.conductor else None
+        )
+        for est in estudiantes
+    ]
+
     return schemas.ApoderadoResponse(
         id_apoderado=apoderado.id_apoderado,
         usuario=schemas.ApoderadoConEstudiantes(
@@ -34,11 +53,10 @@ def obtener_mi_perfil_completo(
             nombre=usuario_actual.nombre,
             email=usuario_actual.email,
             telefono=usuario_actual.telefono,
-            estudiantes=[
-                schemas.EstudianteSimple.from_orm(est) for est in estudiantes
-            ]
+            estudiantes=estudiantes_response
         )
     )
+
 
 @router.post("/asistencia", response_model=schemas.AsistenciaResponse)
 def registrar_asistencia(
