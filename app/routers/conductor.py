@@ -241,13 +241,14 @@ def obtener_mis_rutas_fijas(
                 id_ruta_fija=ruta.id_ruta_fija,
                 nombre=ruta.nombre,
                 descripcion=ruta.descripcion,
-                id_conductor=ruta.id_conductor,
+                id_usuario_conductor=usuario_actual.id_usuario,  # Aquí el cambio correcto
                 paradas=paradas_estudiantes,
                 parada_final=parada_final
             )
         )
 
     return resultado
+
 
 @router.post("/GenerarRuta/{id_ruta_fija}", response_model=schemas.RutaConParadasResponse)
 def generar_ruta_dia(
