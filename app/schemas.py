@@ -546,7 +546,7 @@ class ParadaFinalRutaFijaCreate(BaseModel):
     orden: Optional[int] = None
     
 class RutaFijaCreate(BaseModel):
-    id_conductor: int
+    id_usuario_conductor: int
     nombre: str
     descripcion: str
     paradas_estudiantes: List[ParadaEstudianteRutaFijaCreate]
@@ -574,7 +574,7 @@ class RutaDiaActivaResponse(BaseModel):
 class RutaFijaUpdate(BaseModel):
     nombre: Optional[str]
     descripcion: Optional[str]
-    id_conductor: Optional[int] 
+    id_usuario_conductor: Optional[int] 
     paradas_estudiantes: Optional[List[ParadaEstudianteRutaFijaCreate]]
     parada_final: Optional[ParadaFinalRutaFijaCreate]
 
@@ -601,7 +601,7 @@ class RutaFijaResponse(BaseModel):
     id_ruta_fija: int
     nombre: str
     descripcion: str
-    id_conductor: int
+    id_usuario_conductor: int
     paradas: List[ParadaEstudianteRutaFijaResponse]
     parada_final: Optional[ParadaFinalRutaFijaResponse] = None
 

@@ -16,18 +16,19 @@ def crear_ruta_fija(
 ):
     if usuario_actual.tipo_usuario != "administrador":
         raise HTTPException(status_code=403, detail="Solo administradores pueden crear rutas fijas.")
-    
-    conductor = db.query(models.Conductor).filter_by(id_conductor=ruta.id_conductor).first()
+
+    # Buscar conductor por ID de usuario
+    conductor = db.query(models.Conductor).filter_by(id_usuario=ruta.id_usuario_conductor).first()
     if not conductor:
-        raise HTTPException(status_code=404, detail=f"No existe un conductor con id {ruta.id_conductor}")
-    
+        raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
+
     nueva_ruta = models.RutaFija(
-        id_conductor=ruta.id_conductor,
+        id_conductor=conductor.id_conductor,
         nombre=ruta.nombre,
         descripcion=ruta.descripcion,
     )
     db.add(nueva_ruta)
-    db.flush()  # Obtener id_ruta_fija antes de agregar paradas
+    db.flush()  # Obtener id_ruta_fija antes de insertar las paradas
 
     # Agregar paradas de estudiantes
     for parada in ruta.paradas_estudiantes:
@@ -45,7 +46,7 @@ def crear_ruta_fija(
         )
         db.add(nueva_parada)
 
-    # Agregar parada final si se especificó
+    # Agregar parada final si se proporcionó
     parada_final = None
     if ruta.parada_final:
         orden_final = ruta.parada_final.orden or (len(ruta.paradas_estudiantes) + 1)
@@ -62,7 +63,7 @@ def crear_ruta_fija(
     db.commit()
     db.refresh(nueva_ruta)
 
-    # Obtener paradas desde la base de datos para estructurar la respuesta
+    # Obtener paradas ordenadas
     paradas_db = (
         db.query(models.ParadaRutaFija)
         .filter_by(id_ruta_fija=nueva_ruta.id_ruta_fija)
@@ -98,7 +99,6 @@ def crear_ruta_fija(
         paradas=paradas_estudiantes_response,
         parada_final=parada_final_response
     )
-
 
 
 @router.get("/RutasFijas", response_model=list[schemas.RutaFijaResponse])
@@ -215,11 +215,15 @@ def editar_ruta_fija(
         ruta.descripcion = datos.descripcion
 
     # Actualizar el conductor si se proporciona
-    if datos.id_conductor is not None:
-        conductor = db.query(models.Conductor).filter_by(id_conductor=datos.id_conductor).first()
+    if datos.id_usuario_conductor is not None:
+        conductor = db.query(models.Conductor).filter_by(id_usuario=datos.id_usuario_conductor).first()
         if not conductor:
             raise HTTPException(status_code=404, detail="Conductor no encontrado")
-        ruta.id_conductor = datos.id_conductor
+        ruta.id_conductor = conductor.id_conductor
+        conductor_usuario_id = datos.id_usuario_conductor
+    else:
+        conductor = db.query(models.Conductor).filter_by(id_conductor=ruta.id_conductor).first()
+        conductor_usuario_id = conductor.id_usuario if conductor else None
 
     # Eliminar paradas antiguas
     db.query(models.ParadaRutaFija).filter_by(id_ruta_fija=id_ruta_fija).delete()
@@ -298,10 +302,11 @@ def editar_ruta_fija(
         id_ruta_fija=ruta.id_ruta_fija,
         nombre=ruta.nombre,
         descripcion=ruta.descripcion,
-        id_conductor=ruta.id_conductor,
+        id_usuario_conductor=conductor_usuario_id,
         paradas=paradas_estudiantes,
         parada_final=parada_final
     )
+
 
 
 @router.delete("/RutaFija/{id_ruta_fija}", status_code=204)
