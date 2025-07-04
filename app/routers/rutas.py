@@ -95,7 +95,7 @@ def crear_ruta_fija(
         id_ruta_fija=nueva_ruta.id_ruta_fija,
         nombre=nueva_ruta.nombre,
         descripcion=nueva_ruta.descripcion,
-        id_conductor=nueva_ruta.id_conductor,
+        id_usuario_conductor=conductor.id_usuario,
         paradas=paradas_estudiantes_response,
         parada_final=parada_final_response
     )
@@ -165,6 +165,10 @@ def obtener_ruta_fija_por_id(
     if not ruta:
         raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
 
+    # Obtener id_usuario del conductor
+    conductor = db.query(models.Conductor).filter_by(id_conductor=ruta.id_conductor).first()
+    id_usuario_conductor = conductor.id_usuario if conductor else None
+
     paradas_db = (
         db.query(models.ParadaRutaFija)
         .filter_by(id_ruta_fija=id_ruta_fija)
@@ -196,7 +200,7 @@ def obtener_ruta_fija_por_id(
         id_ruta_fija=ruta.id_ruta_fija,
         nombre=ruta.nombre,
         descripcion=ruta.descripcion,
-        id_conductor=ruta.id_conductor,
+        id_usuario_conductor=id_usuario_conductor,
         paradas=paradas_estudiantes,
         parada_final=parada_final
     )
