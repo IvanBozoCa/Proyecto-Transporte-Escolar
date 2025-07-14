@@ -1,8 +1,8 @@
-"""Recrear estructura actualizada del backend
+"""Recrear base limpia
 
-Revision ID: b0ba64f32b31
-Revises: 682c803a9d82
-Create Date: 2025-06-23 15:37:56.715234
+Revision ID: 8826cb81cf6d
+Revises: 5a814a4bd872
+Create Date: 2025-07-05 16:27:51.676862
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b0ba64f32b31'
-down_revision: Union[str, Sequence[str], None] = '682c803a9d82'
+revision: str = '8826cb81cf6d'
+down_revision: Union[str, Sequence[str], None] = '5a814a4bd872'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

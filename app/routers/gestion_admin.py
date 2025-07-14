@@ -65,7 +65,14 @@ def crear_apoderado_con_estudiante(
     db.add(nuevo_estudiante)
     db.commit()
     db.refresh(nuevo_estudiante)
-
+    
+    nueva_asistencia = models.Asistencia(
+        id_estudiante=nuevo_estudiante.id_estudiante,
+        fecha=date.today(),
+        asiste=True)
+    db.add(nueva_asistencia)
+    db.commit()
+    
     # Obtener id_usuario del conductor para incluir en el response
     usuario_conductor = None
     if nuevo_estudiante.id_conductor:
