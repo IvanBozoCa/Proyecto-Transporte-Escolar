@@ -703,3 +703,34 @@ def obtener_estudiante_por_id(
         long_colegio=estudiante.long_colegio,
         id_usuario_conductor=usuario_conductor
     )
+    
+
+@router.get("/estudiantes", response_model=list[schemas.EstudianteResponse])
+def obtener_todos_los_estudiantes(
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)
+):
+    estudiantes = db.query(models.Estudiante).all()
+
+    resultado = []
+    for estudiante in estudiantes:
+
+        resultado.append(
+            schemas.EstudianteResponse(
+                id_estudiante=estudiante.id_estudiante,
+                nombre=estudiante.nombre,
+                edad=estudiante.edad,
+                curso=estudiante.curso,
+                colegio=estudiante.colegio,
+                casa=estudiante.casa,
+                lat_casa=estudiante.lat_casa,
+                long_casa=estudiante.long_casa,
+                lat_colegio=estudiante.lat_colegio,
+                long_colegio=estudiante.long_colegio,
+                nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+                telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+                id_usuario_conductor=estudiante.id_conductor
+            )
+        )
+
+    return resultado
