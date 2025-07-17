@@ -672,3 +672,34 @@ def editar_conductor_completo(
             long_casa=conductor.long_casa
         )
     )
+
+@router.get("/estudiante/{id_estudiante}", response_model=schemas.EstudianteResponse)
+def obtener_estudiante_por_id(
+    id_estudiante: int,
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(verificar_admin)  # Solo administrador
+):
+    estudiante = db.query(models.Estudiante).filter_by(id_estudiante=id_estudiante).first()
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
+
+    # Obtener id_usuario_conductor (si tiene conductor)
+    usuario_conductor = None
+    if estudiante.id_conductor:
+        conductor = db.query(models.Conductor).filter_by(id_conductor=estudiante.id_conductor).first()
+        if conductor:
+            usuario_conductor = conductor.id_usuario
+
+    return schemas.EstudianteResponse(
+        id_estudiante=estudiante.id_estudiante,
+        nombre=estudiante.nombre,
+        edad=estudiante.edad,
+        curso=estudiante.curso,
+        colegio=estudiante.colegio,
+        casa=estudiante.casa,
+        lat_casa=estudiante.lat_casa,
+        long_casa=estudiante.long_casa,
+        lat_colegio=estudiante.lat_colegio,
+        long_colegio=estudiante.long_colegio,
+        id_usuario_conductor=usuario_conductor
+    )
