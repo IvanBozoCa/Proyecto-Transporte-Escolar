@@ -112,3 +112,17 @@ def validar_patente_chilena(patente: str):
     # Formato nuevo chileno tipo AB12CD
     if not re.match(r'^[A-Z]{2}[0-9]{2}[A-Z]{2}$', patente.upper()):
         raise HTTPException(status_code=400, detail="La patente no tiene un formato válido (ej: AB12CD)")
+
+RESET_PASSWORD_SECRET = "OTRA_LLAVE_SECRETA" 
+def generar_token_restablecer_contrasena(email: str) -> str:
+    datos = {"sub": email, "exp": datetime.utcnow() + timedelta(minutes=15)}
+    return jwt.encode(datos, RESET_PASSWORD_SECRET, algorithm=ALGORITHM)
+
+def verificar_token_restablecer_contrasena(token: str) -> str:
+    try:
+        payload = jwt.decode(token, RESET_PASSWORD_SECRET, algorithms=[ALGORITHM])
+        return payload.get("sub")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="El enlace ha expirado")
+    except jwt.JWTError:
+        raise HTTPException(status_code=400, detail="Token inválido")

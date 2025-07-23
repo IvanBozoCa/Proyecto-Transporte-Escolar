@@ -26,7 +26,10 @@ class UsuarioCreate(BaseModel):
     email: EmailStr
     telefono: str
     contrasena: str 
-    
+
+class ReiniciarContrasenaInput(BaseModel):
+    token: str
+    nueva_contrasena: str
 
 class UsuarioUpdate(BaseModel):
     nombre: Optional[str] 

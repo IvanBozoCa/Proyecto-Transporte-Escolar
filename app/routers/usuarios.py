@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app import schemas, models, database, auth
 from app.auth import get_current_user
 from app.database import get_db
+from pydantic import EmailStr
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 @router.get("/me", response_model=schemas.UsuarioResponse)
@@ -40,3 +41,32 @@ def actualizar_mi_usuario(
     db.commit()
     db.refresh(usuario_actual)
     return usuario_actual
+
+
+@router.post("/olvide-contrasena")
+def solicitar_reinicio_contrasena(email: EmailStr, db: Session = Depends(get_db)):
+    usuario = db.query(models.Usuario).filter_by(email=email).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    token = auth.generar_token_restablecer_contrasena(usuario.email)
+
+    #TODO: Enviar por correo real. Por ahora, devolver token para pruebas.
+    return {"mensaje": "Revisa tu correo para restablecer la contraseña", "token": token}
+
+
+@router.post("/reiniciar-contrasena")
+def reiniciar_contrasena(datos: schemas.ReiniciarContrasenaInput, db: Session = Depends(get_db)):
+    email = auth.verificar_token_restablecer_contrasena(datos.token)
+    usuario = db.query(models.Usuario).filter_by(email=email).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # Validar nueva contraseña
+    auth.validar_contrasena(datos.nueva_contrasena)
+
+    # Actualizar
+    usuario.contrasena = auth.hash_contrasena(datos.nueva_contrasena)
+    db.commit()
+
+    return {"mensaje": "Contraseña actualizada correctamente"}
