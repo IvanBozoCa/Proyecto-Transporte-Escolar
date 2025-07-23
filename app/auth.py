@@ -8,6 +8,7 @@ from app import schemas, models, database
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Usuario
+import re
 
 # Dependencia para obtener la sesión de base de datos
 def get_db():
@@ -92,3 +93,22 @@ def verificar_tipo_usuario(usuario: Usuario = Depends(get_current_user)):
     if usuario.tipo_usuario not in ["conductor", "apoderado"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
     return usuario
+
+
+def validar_contrasena(password: str):
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+    if not any(c.isupper() for c in password):
+        raise HTTPException(status_code=400, detail="Debe tener al menos una letra mayúscula.")
+    if not any(c.islower() for c in password):
+        raise HTTPException(status_code=400, detail="Debe tener al menos una letra minúscula.")
+    if not any(c.isdigit() for c in password):
+        raise HTTPException(status_code=400, detail="Debe tener al menos un número.")
+    if not any(c in "!@#$%^&*()_+-=[]{};:,.<>?" for c in password):
+        raise HTTPException(status_code=400, detail="Debe tener al menos un símbolo especial.")
+
+
+def validar_patente_chilena(patente: str):
+    # Formato nuevo chileno tipo AB12CD
+    if not re.match(r'^[A-Z]{2}[0-9]{2}[A-Z]{2}$', patente.upper()):
+        raise HTTPException(status_code=400, detail="La patente no tiene un formato válido (ej: AB12CD)")
