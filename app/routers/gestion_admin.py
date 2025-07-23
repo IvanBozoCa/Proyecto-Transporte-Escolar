@@ -11,17 +11,16 @@ router = APIRouter(prefix="/admin", tags=["Administrador"])
 # ---------- CREAR ADMIN ----------
 
 @router.post("/apoderado", response_model=schemas.ApoderadoYEstudianteResponse)
-def crear_apoderado_con_estudiante(
+def crear_apoderado_con_estudiantes(
     datos: schemas.ApoderadoYEstudiantecreate,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(verificar_admin)
 ):
-    # Validar que el correo no esté en uso
     if db.query(models.Usuario).filter_by(email=datos.apoderado.email).first():
         raise HTTPException(status_code=400, detail="Correo ya registrado")
     
     validar_contrasena(datos.apoderado.contrasena)
-    # Crear el usuario apoderado
+
     nuevo_usuario = models.Usuario(
         nombre=datos.apoderado.nombre,
         email=datos.apoderado.email,
@@ -33,53 +32,70 @@ def crear_apoderado_con_estudiante(
     db.commit()
     db.refresh(nuevo_usuario)
 
-    # Crear entidad Apoderado
     nuevo_apoderado = models.Apoderado(id_usuario=nuevo_usuario.id_usuario)
     db.add(nuevo_apoderado)
     db.commit()
     db.refresh(nuevo_apoderado)
 
-    # Buscar id_conductor desde id_usuario_conductor (opcional)
-    id_conductor_final = None
-    if datos.estudiante.id_usuario_conductor:
-        conductor = db.query(models.Conductor).filter_by(id_usuario=datos.estudiante.id_usuario_conductor).first()
-        if not conductor:
-            raise HTTPException(status_code=404, detail="Conductor no encontrado para ese usuario")
-        id_conductor_final = conductor.id_conductor
+    estudiantes_respuesta = []
 
-    # Crear estudiante
-    nuevo_estudiante = models.Estudiante(
-        nombre=datos.estudiante.nombre,
-        edad=datos.estudiante.edad,
-        id_apoderado=nuevo_apoderado.id_apoderado,
-        colegio=datos.estudiante.colegio,
-        casa=datos.estudiante.casa,
-        curso=datos.estudiante.curso,
-        lat_casa=datos.estudiante.lat_casa,
-        long_casa=datos.estudiante.long_casa,
-        lat_colegio=datos.estudiante.lat_colegio,
-        long_colegio=datos.estudiante.long_colegio,
-        nombre_apoderado_secundario=datos.estudiante.nombre_apoderado_secundario,
-        telefono_apoderado_secundario=datos.estudiante.telefono_apoderado_secundario,
-        id_conductor=id_conductor_final
-    )
-    db.add(nuevo_estudiante)
-    db.commit()
-    db.refresh(nuevo_estudiante)
-    
-    nueva_asistencia = models.Asistencia(
-        id_estudiante=nuevo_estudiante.id_estudiante,
-        fecha=date.today(),
-        asiste=True)
-    db.add(nueva_asistencia)
-    db.commit()
-    
-    # Obtener id_usuario del conductor para incluir en el response
-    usuario_conductor = None
-    if nuevo_estudiante.id_conductor:
-        conductor_asociado = db.query(models.Conductor).filter_by(id_conductor=nuevo_estudiante.id_conductor).first()
-        if conductor_asociado:
-            usuario_conductor = conductor_asociado.id_usuario
+    for estudiante in datos.estudiantes:
+        id_conductor_final = None
+        if estudiante.id_usuario_conductor:
+            conductor = db.query(models.Conductor).filter_by(id_usuario=estudiante.id_usuario_conductor).first()
+            if not conductor:
+                raise HTTPException(status_code=404, detail="Conductor no encontrado para ese usuario")
+            id_conductor_final = conductor.id_conductor
+
+        nuevo_estudiante = models.Estudiante(
+            nombre=estudiante.nombre,
+            edad=estudiante.edad,
+            id_apoderado=nuevo_apoderado.id_apoderado,
+            colegio=estudiante.colegio,
+            casa=estudiante.casa,
+            curso=estudiante.curso,
+            lat_casa=estudiante.lat_casa,
+            long_casa=estudiante.long_casa,
+            lat_colegio=estudiante.lat_colegio,
+            long_colegio=estudiante.long_colegio,
+            nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+            telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+            id_conductor=id_conductor_final
+        )
+        db.add(nuevo_estudiante)
+        db.commit()
+        db.refresh(nuevo_estudiante)
+
+        nueva_asistencia = models.Asistencia(
+            id_estudiante=nuevo_estudiante.id_estudiante,
+            fecha=date.today(),
+            asiste=True)
+        db.add(nueva_asistencia)
+        db.commit()
+
+        usuario_conductor = None
+        if nuevo_estudiante.id_conductor:
+            conductor_asociado = db.query(models.Conductor).filter_by(id_conductor=nuevo_estudiante.id_conductor).first()
+            if conductor_asociado:
+                usuario_conductor = conductor_asociado.id_usuario
+
+        estudiantes_respuesta.append(
+            schemas.EstudianteResponse(
+                id_estudiante=nuevo_estudiante.id_estudiante,
+                nombre=nuevo_estudiante.nombre,
+                edad=nuevo_estudiante.edad,
+                curso=nuevo_estudiante.curso,
+                colegio=nuevo_estudiante.colegio,
+                casa=nuevo_estudiante.casa,
+                lat_casa=nuevo_estudiante.lat_casa,
+                long_casa=nuevo_estudiante.long_casa,
+                lat_colegio=nuevo_estudiante.lat_colegio,
+                long_colegio=nuevo_estudiante.long_colegio,
+                nombre_apoderado_secundario=nuevo_estudiante.nombre_apoderado_secundario,
+                telefono_apoderado_secundario=nuevo_estudiante.telefono_apoderado_secundario,
+                id_usuario_conductor=usuario_conductor
+            )
+        )
 
     return schemas.ApoderadoYEstudianteResponse(
         apoderado=schemas.UsuarioResponse(
@@ -89,21 +105,7 @@ def crear_apoderado_con_estudiante(
             telefono=nuevo_usuario.telefono,
             tipo_usuario=nuevo_usuario.tipo_usuario
         ),
-        estudiante=schemas.EstudianteResponse(
-            id_estudiante=nuevo_estudiante.id_estudiante,
-            nombre=nuevo_estudiante.nombre,
-            edad=nuevo_estudiante.edad,
-            curso=nuevo_estudiante.curso,
-            colegio=nuevo_estudiante.colegio,
-            casa=nuevo_estudiante.casa,
-            lat_casa=nuevo_estudiante.lat_casa,
-            long_casa=nuevo_estudiante.long_casa,
-            lat_colegio=nuevo_estudiante.lat_colegio,
-            long_colegio=nuevo_estudiante.long_colegio,
-            nombre_apoderado_secundario=nuevo_estudiante.nombre_apoderado_secundario,
-            telefono_apoderado_secundario=nuevo_estudiante.telefono_apoderado_secundario,
-            id_usuario_conductor=usuario_conductor  
-        )
+        estudiante=estudiantes_respuesta
     )
 
 # ---------- ACOMPAÑANTE ----------

@@ -151,7 +151,7 @@ class EstudianteEnConductor(BaseModel):
 
 class ApoderadoYEstudiantecreate(BaseModel):
     apoderado: UsuarioCreate
-    estudiante: EstudianteCreate
+    estudiante: List[EstudianteCreate]
     
 class ApoderadoYEstudiante(BaseModel):
     apoderado: UsuarioUpdate

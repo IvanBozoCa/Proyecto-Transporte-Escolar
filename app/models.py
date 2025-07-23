@@ -176,16 +176,6 @@ class Notificacion(Base):
     usuario = relationship("Usuario", back_populates="notificaciones")
 
 
-# ================= VÍNCULO =================
-class Vinculo(Base):
-    __tablename__ = "vinculos_apoderado_conductor"
-    id_vinculo = Column(Integer, primary_key=True)
-    id_apoderado = Column(Integer, ForeignKey("apoderados.id_apoderado"))
-    id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"))
-    fecha_vinculacion = Column(DateTime, default=datetime.utcnow)
-
-    apoderado = relationship("Apoderado", back_populates="vinculaciones")
-    conductor = relationship("Conductor", back_populates="vinculaciones")   
 # ================== MODELO: Ruta Fija ==================
 class RutaFija(Base):
     __tablename__ = "rutas_fijas"

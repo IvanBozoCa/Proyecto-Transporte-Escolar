@@ -1,10 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app import schemas, models, database, auth
+from app import schemas, models, database, auth,email_envio
 from app.auth import get_current_user
 from app.database import get_db
 from pydantic import EmailStr
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
+
+@router.post("/CrearAdministrador", response_model=schemas.UsuarioResponse)
+def crear_administrador(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+    # Validar si ya existe el correo
+    if db.query(models.Usuario).filter_by(email=usuario.email).first():
+        raise HTTPException(status_code=400, detail="Correo ya registrado")
+
+    # Validar contraseña
+    auth.validar_contrasena(usuario.contrasena)
+
+    # Crear usuario con tipo administrador
+    nuevo_usuario = models.Usuario(
+        nombre=usuario.nombre,
+        email=usuario.email,
+        telefono=usuario.telefono,
+        tipo_usuario="administrador",
+        contrasena=auth.hash_contrasena(usuario.contrasena)
+    )
+
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+
+    return schemas.UsuarioResponse(
+        nombre=nuevo_usuario.nombre,
+        email=nuevo_usuario.email,
+        telefono=nuevo_usuario.telefono,
+        tipo_usuario=nuevo_usuario.tipo_usuario
+    )
 
 @router.get("/me", response_model=schemas.UsuarioResponse)
 def obtener_mi_usuario(usuario_actual: models.Usuario = Depends(get_current_user)):
@@ -43,7 +72,7 @@ def actualizar_mi_usuario(
     return usuario_actual
 
 
-@router.post("/olvide-contrasena")
+@router.post("/OlvideContrasena")
 def solicitar_reinicio_contrasena(email: EmailStr, db: Session = Depends(get_db)):
     usuario = db.query(models.Usuario).filter_by(email=email).first()
     if not usuario:
@@ -51,11 +80,11 @@ def solicitar_reinicio_contrasena(email: EmailStr, db: Session = Depends(get_db)
 
     token = auth.generar_token_restablecer_contrasena(usuario.email)
 
-    #TODO: Enviar por correo real. Por ahora, devolver token para pruebas.
+    email_envio.enviar_correo_restablecer_contrasena(email, token)
     return {"mensaje": "Revisa tu correo para restablecer la contraseña", "token": token}
 
 
-@router.post("/reiniciar-contrasena")
+@router.post("/ReiniciarContrasena")
 def reiniciar_contrasena(datos: schemas.ReiniciarContrasenaInput, db: Session = Depends(get_db)):
     email = auth.verificar_token_restablecer_contrasena(datos.token)
     usuario = db.query(models.Usuario).filter_by(email=email).first()
