@@ -36,7 +36,6 @@ class Conductor(Base):
     estudiantes = relationship("Estudiante", back_populates="conductor")
     usuario = relationship("Usuario", back_populates="conductor")
     rutas = relationship("Ruta", back_populates="conductor")
-    vinculaciones = relationship("Vinculo", back_populates="conductor")
     acompanante = relationship("Acompanante", back_populates="conductores")
     ubicaciones = relationship("UbicacionConductor", back_populates="conductor")
     rutas_fijas = relationship("RutaFija", back_populates="conductor", cascade="all, delete-orphan")
@@ -62,7 +61,7 @@ class Apoderado(Base):
     
     usuario = relationship("Usuario", back_populates="apoderado")
     estudiantes = relationship("Estudiante", back_populates="apoderado")
-    vinculaciones = relationship("Vinculo", back_populates="apoderado")
+
 
 
 # ================= ESTUDIANTE =================
