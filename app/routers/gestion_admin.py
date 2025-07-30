@@ -39,7 +39,7 @@ def crear_apoderado_con_estudiantes(
 
     estudiantes_respuesta = []
 
-    for estudiante in datos.estudiantes:
+    for estudiante in datos.estudiante:
         id_conductor_final = None
         if estudiante.id_usuario_conductor:
             conductor = db.query(models.Conductor).filter_by(id_usuario=estudiante.id_usuario_conductor).first()
@@ -175,8 +175,6 @@ def crear_conductor_completo(
     )
 )
 
-
-
 @router.post("/AsignarEstudianteConductor")
 def asignar_estudiante_a_conductor(
     datos: schemas.EstudianteAConductor,
@@ -281,7 +279,8 @@ def obtener_conductor_completo(
             nombre=usuario.nombre,
             email=usuario.email,
             telefono=usuario.telefono,
-            tipo_usuario=usuario.tipo_usuario
+            tipo_usuario=usuario.tipo_usuario,
+           # contrasena=usuario.contrasena
         ),
         datos_conductor=schemas.DatosConductorSchema(
             patente=conductor.patente,
@@ -291,8 +290,6 @@ def obtener_conductor_completo(
             long_casa=conductor.long_casa
         )
     )
-
-
 
 @router.get("/apoderado", response_model=List[schemas.ApoderadoConEstudiantes])
 def obtener_apoderados_con_estudiantes(
@@ -466,6 +463,7 @@ def obtener_apoderado_por_id(
         nombre=usuario.nombre,
         email=usuario.email,
         telefono=usuario.telefono,
+       # contrasena=usuario.contrasena,
         estudiantes=estudiantes
     )
 
@@ -534,17 +532,14 @@ def editar_apoderado_con_estudiante(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    # Buscar apoderado
     apoderado = db.query(models.Apoderado).filter_by(id_usuario=id_usuario).first()
     if not apoderado:
         raise HTTPException(status_code=404, detail="Apoderado no encontrado")
 
-    # Buscar usuario asociado
-    usuario = db.query(models.Usuario).filter_by(id_usuario=apoderado.id_usuario).first()
+    usuario = apoderado.usuario
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
 
-    # Verificar duplicidad de correo
     email_existente = db.query(models.Usuario).filter(
         models.Usuario.email == datos.apoderado.email,
         models.Usuario.id_usuario != usuario.id_usuario
@@ -552,63 +547,69 @@ def editar_apoderado_con_estudiante(
     if email_existente:
         raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
 
-    # Actualizar datos del usuario
     usuario.nombre = datos.apoderado.nombre
     usuario.email = datos.apoderado.email
     usuario.telefono = datos.apoderado.telefono
 
-    # Buscar estudiante
-    estudiante = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).first()
-    usuario_conductor = None
+    if datos.apoderado.contrasena:
+        validar_contrasena(datos.apoderado.contrasena)
+        usuario.contrasena = hash_contrasena(datos.apoderado.contrasena)
 
-    if estudiante:
-        estudiante.nombre = datos.estudiante.nombre
-        estudiante.edad = datos.estudiante.edad
-        estudiante.nombre_apoderado_secundario = datos.estudiante.nombre_apoderado_secundario
-        estudiante.telefono_apoderado_secundario = datos.estudiante.telefono_apoderado_secundario
-        estudiante.curso = datos.estudiante.curso
-        estudiante.colegio = datos.estudiante.colegio
-        estudiante.lat_casa = datos.estudiante.lat_casa
-        estudiante.long_casa = datos.estudiante.long_casa
-        estudiante.lat_colegio = datos.estudiante.lat_colegio
-        estudiante.long_colegio = datos.estudiante.long_colegio
+    estudiantes_respuesta = []
 
-        # Actualizar conductor si se proporciona
-        if datos.estudiante.id_usuario_conductor is not None:
-            conductor = db.query(models.Conductor).filter_by(id_usuario=datos.estudiante.id_usuario_conductor).first()
+    for estudiante_input in datos.estudiante:
+        estudiante = db.query(models.Estudiante).filter_by(
+            id_estudiante=estudiante_input.id_estudiante,
+            id_apoderado=apoderado.id_apoderado
+        ).first()
+
+        if not estudiante:
+            raise HTTPException(status_code=404, detail=f"Estudiante con ID {estudiante_input.id_estudiante} no encontrado.")
+
+        estudiante.nombre = estudiante_input.nombre
+        estudiante.edad = estudiante_input.edad
+        estudiante.nombre_apoderado_secundario = estudiante_input.nombre_apoderado_secundario
+        estudiante.telefono_apoderado_secundario = estudiante_input.telefono_apoderado_secundario
+        estudiante.curso = estudiante_input.curso
+        estudiante.colegio = estudiante_input.colegio
+        estudiante.lat_casa = estudiante_input.lat_casa
+        estudiante.long_casa = estudiante_input.long_casa
+        estudiante.lat_colegio = estudiante_input.lat_colegio
+        estudiante.long_colegio = estudiante_input.long_colegio
+
+        if estudiante_input.id_usuario_conductor is not None:
+            conductor = db.query(models.Conductor).filter_by(id_usuario=estudiante_input.id_usuario_conductor).first()
             if not conductor:
                 raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
             estudiante.id_conductor = conductor.id_conductor
             usuario_conductor = conductor.id_usuario
+        else:
+            usuario_conductor = estudiante.conductor.id_usuario if estudiante.conductor else None
 
-        # Si ya tiene un conductor asignado, recuperar su id_usuario también
-        elif estudiante.id_conductor:
-            conductor_existente = db.query(models.Conductor).filter_by(id_conductor=estudiante.id_conductor).first()
-            if conductor_existente:
-                usuario_conductor = conductor_existente.id_usuario
+        estudiantes_respuesta.append(
+            schemas.EstudianteResponse(
+                id_estudiante=estudiante.id_estudiante,
+                nombre=estudiante.nombre,
+                edad=estudiante.edad,
+                curso=estudiante.curso,
+                colegio=estudiante.colegio,
+                casa=estudiante.casa,
+                lat_casa=estudiante.lat_casa,
+                long_casa=estudiante.long_casa,
+                lat_colegio=estudiante.lat_colegio,
+                long_colegio=estudiante.long_colegio,
+                nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
+                telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
+                id_usuario_conductor=usuario_conductor
+            )
+        )
 
     db.commit()
     db.refresh(usuario)
-    if estudiante:
-        db.refresh(estudiante)
 
     return schemas.ApoderadoYEstudianteResponse(
         apoderado=schemas.UsuarioResponse.from_orm(usuario),
-        estudiante=schemas.EstudianteResponse(
-            id_estudiante=estudiante.id_estudiante,
-            nombre=estudiante.nombre,
-            edad=estudiante.edad,
-            curso=estudiante.curso,
-            colegio=estudiante.colegio,
-            casa=estudiante.casa,
-            lat_casa=estudiante.lat_casa,
-            long_casa=estudiante.long_casa,
-            lat_colegio=estudiante.lat_colegio,
-            long_colegio=estudiante.long_colegio,
-            nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
-            telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
-            id_usuario_conductor=usuario_conductor
-        ) if estudiante else None
+        estudiante=estudiantes_respuesta
     )
 
 
@@ -644,7 +645,9 @@ def editar_conductor_completo(
         usuario.email = datos.usuario.email
     if datos.usuario.telefono:
         usuario.telefono = datos.usuario.telefono
-
+    if datos.usuario.contrasena:
+        validar_contrasena(datos.usuario.contrasena)
+        usuario.contrasena = hash_contrasena(datos.usuario.contrasena)
 
     # Actualizar datos del conductor
     if datos.datos_conductor.patente:
@@ -678,6 +681,7 @@ def editar_conductor_completo(
             long_casa=conductor.long_casa
         )
     )
+
 
 @router.get("/estudiante/{id_estudiante}", response_model=schemas.EstudianteResponse)
 def obtener_estudiante_por_id(

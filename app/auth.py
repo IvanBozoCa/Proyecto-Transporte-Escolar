@@ -109,10 +109,16 @@ def validar_contrasena(password: str):
 
 
 def validar_patente_chilena(patente: str):
-    # Formato nuevo chileno tipo AB12CD
-    if not re.match(r'^[A-Z]{2}[0-9]{2}[A-Z]{2}$', patente.upper()):
-        raise HTTPException(status_code=400, detail="La patente no tiene un formato válido (ej: AB12CD)")
-
+    patente = patente.strip().upper()
+    
+    formato_nuevo = re.match(r'^[A-Z]{2}[0-9]{2}[A-Z]{2}$', patente)
+    formato_antiguo = re.match(r'^[A-Z]{3}[0-9]{3}$', patente)
+    
+    if not (formato_nuevo or formato_antiguo):
+        raise HTTPException(
+            status_code=400,
+            detail="La patente no tiene un formato válido. Ejemplos válidos: AB12CD o ABC123"
+        )
 RESET_PASSWORD_SECRET = "OTRA_LLAVE_SECRETA" 
 def generar_token_restablecer_contrasena(email: str) -> str:
     datos = {"sub": email, "exp": datetime.utcnow() + timedelta(minutes=15)}

@@ -35,6 +35,7 @@ class UsuarioUpdate(BaseModel):
     nombre: Optional[str] 
     email: Optional[EmailStr] 
     telefono: Optional[str] 
+    contrasena: Optional[str]
     
     class Config:
         from_attributes = True
@@ -49,7 +50,17 @@ class UsuarioUpdateconductor(BaseModel):
     
     class Config:
         from_attributes = True
+        
+class UsuarioConContrasenaResponse(BaseModel):
+    id_usuario: int
+    nombre: str
+    email: EmailStr
+    telefono: str
+    tipo_usuario: str
+    contrasena: str 
 
+    class Config:
+        from_attributes = True
 # ---------- ESTUDIANTE ----------
 
 class Coordenadas(BaseModel):
@@ -88,6 +99,7 @@ class EstudianteResponse(BaseModel):
         from_attributes = True
 
 class EstudianteUpdate(BaseModel):
+    id_estudiante: Optional[int]  
     nombre: Optional[str]
     edad: Optional[int]
     curso: Optional[str] = None
@@ -148,18 +160,27 @@ class EstudianteEnConductor(BaseModel):
         from_attributes = True
 
 # ---------- APODERADO Y ESTUDIANTE COMBINADO ----------
+class ApoderadoConEstudiantesConContrasena(BaseModel):
+    id_usuario: int
+    nombre: str
+    email: str
+    telefono: str
+    contrasena: str
+    estudiantes: List[EstudianteSimple]
 
+    class Config:
+        from_attributes = True
 class ApoderadoYEstudiantecreate(BaseModel):
     apoderado: UsuarioCreate
     estudiante: List[EstudianteCreate]
     
 class ApoderadoYEstudiante(BaseModel):
     apoderado: UsuarioUpdate
-    estudiante: EstudianteUpdate
+    estudiante: List[EstudianteUpdate]
 
 class ApoderadoYEstudianteResponse(BaseModel):
     apoderado: UsuarioResponse
-    estudiante: EstudianteResponse
+    estudiante: List[EstudianteResponse]
 
 class ApoderadoConEstudiantes(BaseModel):
     id_usuario: int
