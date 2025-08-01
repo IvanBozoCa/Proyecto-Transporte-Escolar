@@ -111,9 +111,6 @@ def registrar_asistencia(
         return nuevo
 
 
-
-
-
 @router.get("/hijos", response_model=List[schemas.EstudianteConAsistenciaHoy])
 def listar_hijos_con_asistencia(
     db: Session = Depends(get_db),
@@ -130,7 +127,7 @@ def listar_hijos_con_asistencia(
     resultado = []
 
     for est in estudiantes:
-        # Buscar la asistencia más reciente (aunque no sea de hoy)
+        # Obtener asistencia más reciente
         asistencia = (
             db.query(models.Asistencia)
             .filter(models.Asistencia.id_estudiante == est.id_estudiante)
@@ -141,13 +138,12 @@ def listar_hijos_con_asistencia(
         if asistencia:
             asistencia_schema = schemas.AsistenciaHoyResponse.from_orm(asistencia)
         else:
-            # Si no hay registros, se asume presente por defecto
             asistencia_schema = schemas.AsistenciaHoyResponse(
                 fecha=date.today(),
                 asiste=True
             )
 
-        # Obtener nombre de la ruta si el estudiante tiene un conductor con ruta fija
+        # Ruta fija asociada (si quieres mantenerla como referencia)
         ruta_fija = (
             db.query(models.RutaFija)
             .join(models.Conductor)
@@ -160,16 +156,42 @@ def listar_hijos_con_asistencia(
             nombre=ruta_fija.nombre
         ) if ruta_fija else None
 
+        # Buscar parada del estudiante en la ruta activa de hoy
+        parada_hoy = (
+            db.query(models.Parada)
+            .join(models.Ruta)
+            .filter(
+                models.Parada.id_estudiante == est.id_estudiante,
+                models.Ruta.fecha == date.today()
+            )
+            .first()
+        )
+
+        recogido = parada_hoy.recogido if parada_hoy else False
+        entregado = parada_hoy.entregado if parada_hoy else False
+        # Determinar estado de la ruta del estudiante
+        if recogido and entregado:
+            estado_ruta = "entregado"
+        elif recogido and not entregado:
+            estado_ruta = "en ruta"
+        elif not recogido:
+            estado_ruta = "pendiente"
+        else:
+            estado_ruta = None
         resultado.append(schemas.EstudianteConAsistenciaHoy(
             id_estudiante=est.id_estudiante,
             nombre=est.nombre,
             curso=est.curso,
             colegio=est.colegio,
             asistencia=asistencia_schema,
-            ruta=ruta_schema
+            ruta=ruta_schema,
+            recogido=recogido,
+            entregado=entregado,
+            estado_ruta=estado_ruta
         ))
 
     return resultado
+
 
 
 @router.get("/ubicacionConductor/{id_usuario}", response_model=schemas.UbicacionConductorResponse)

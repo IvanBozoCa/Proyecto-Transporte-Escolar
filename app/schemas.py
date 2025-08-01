@@ -439,7 +439,10 @@ class EstudianteConAsistenciaHoy(BaseModel):
     colegio: str
     asistencia: Optional[AsistenciaHoyResponse] = None
     ruta: Optional[RutaResumen] = None 
-
+    recogido: Optional[bool] = None
+    entregado: Optional[bool] = None
+    estado_ruta: Optional[str] = None
+    
     class Config:
         from_attributes = True
         
