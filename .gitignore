@@ -1,5 +1,5 @@
 # Ignorar claves de Firebase locales
-transporte-escolar-543e8-firebase-adminsdk-fbsvc-b7052cac65.json
+app/firebase/firebase_key.json
 
 # Ignorar configuraciones locales
 .env
