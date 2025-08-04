@@ -143,7 +143,7 @@ def listar_hijos_con_asistencia(
                 asiste=True
             )
 
-        # Ruta fija asociada (si quieres mantenerla como referencia)
+        # Obtener ruta fija asociada (opcional, solo referencia)
         ruta_fija = (
             db.query(models.RutaFija)
             .join(models.Conductor)
@@ -156,28 +156,33 @@ def listar_hijos_con_asistencia(
             nombre=ruta_fija.nombre
         ) if ruta_fija else None
 
-        # Buscar parada del estudiante en la ruta activa de hoy
+        # Buscar parada activa del estudiante en la ruta del día
         parada_hoy = (
             db.query(models.Parada)
             .join(models.Ruta)
             .filter(
                 models.Parada.id_estudiante == est.id_estudiante,
-                models.Ruta.fecha == date.today()
+                models.Ruta.fecha == date.today(),
+                models.Ruta.estado == "activa"
             )
             .first()
         )
 
-        recogido = parada_hoy.recogido if parada_hoy else False
-        entregado = parada_hoy.entregado if parada_hoy else False
-        # Determinar estado de la ruta del estudiante
-        if recogido and entregado:
-            estado_ruta = "entregado"
-        elif recogido and not entregado:
-            estado_ruta = "en ruta"
-        elif not recogido:
-            estado_ruta = "pendiente"
+        if parada_hoy:
+            recogido = parada_hoy.recogido
+            entregado = parada_hoy.entregado
+
+            if recogido and entregado:
+                estado_ruta = "entregado"
+            elif recogido and not entregado:
+                estado_ruta = "en ruta"
+            else:
+                estado_ruta = "pendiente"
         else:
+            recogido = None
+            entregado = None
             estado_ruta = None
+
         resultado.append(schemas.EstudianteConAsistenciaHoy(
             id_estudiante=est.id_estudiante,
             nombre=est.nombre,
@@ -191,6 +196,7 @@ def listar_hijos_con_asistencia(
         ))
 
     return resultado
+
 
 
 
