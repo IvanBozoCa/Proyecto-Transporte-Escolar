@@ -83,7 +83,7 @@ def get_current_user(
     
     return user
 
-# Verificar tipo de usuario
+
 def verificar_admin(usuario: Usuario = Depends(get_current_user)):
     if usuario.tipo_usuario != "administrador":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
@@ -119,6 +119,7 @@ def validar_patente_chilena(patente: str):
             status_code=400,
             detail="La patente no tiene un formato válido. Ejemplos válidos: AB12CD o ABC123"
         )
+        
 RESET_PASSWORD_SECRET = "OTRA_LLAVE_SECRETA" 
 def generar_token_restablecer_contrasena(email: str) -> str:
     datos = {"sub": email, "exp": datetime.utcnow() + timedelta(minutes=15)}
@@ -132,3 +133,23 @@ def verificar_token_restablecer_contrasena(token: str) -> str:
         raise HTTPException(status_code=400, detail="El enlace ha expirado")
     except jwt.JWTError:
         raise HTTPException(status_code=400, detail="Token inválido")
+    
+    
+def validar_email(email: str):
+
+    patron = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    if not re.match(patron, email):
+        raise HTTPException(
+            status_code=400,
+            detail="El correo electrónico no tiene un formato válido. Ejemplo: usuario@dominio.com"
+        )
+
+
+def validar_telefono(telefono: str):
+
+    patron = r"^\+56\d{9}$"
+    if not re.match(patron, telefono):
+        raise HTTPException(
+            status_code=400,
+            detail="El número debe comenzar con +56 seguido de 9 dígitos. Ejemplo: +56912345678"
+        )

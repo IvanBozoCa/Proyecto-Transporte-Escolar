@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.orm import Session
 from datetime import date
 from app import models, schemas
-from app.auth import hash_contrasena, verificar_admin, get_current_user,validar_contrasena,validar_patente_chilena
+from app.auth import hash_contrasena, verificar_admin, get_current_user,validar_contrasena,validar_patente_chilena,validar_email,validar_telefono
 from app.database import get_db
 from typing import List
 from pydantic import EmailStr
@@ -20,7 +20,9 @@ def crear_apoderado_con_estudiantes(
         raise HTTPException(status_code=400, detail="Correo ya registrado")
     
     validar_contrasena(datos.apoderado.contrasena)
-
+    validar_email(datos.apoderado.email)
+    validar_telefono(datos.apoderado.telefono)
+    
     nuevo_usuario = models.Usuario(
         nombre=datos.apoderado.nombre,
         email=datos.apoderado.email,
@@ -135,6 +137,8 @@ def crear_conductor_completo(
     
     validar_contrasena(datos.usuario.contrasena)
     validar_patente_chilena(datos.datos_conductor.patente)
+    validar_telefono(datos.usuario.telefono)
+    validar_email(datos.usuario.email)
     
     nuevo_usuario = models.Usuario(
         nombre=datos.usuario.nombre,

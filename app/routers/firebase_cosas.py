@@ -12,19 +12,26 @@ router = APIRouter(
 )
 
 
-@router.post("/RegistrarToken")
+@router.post("/registrar-token")
 def registrar_token_firebase(
-    token_data: schemas.TokenFirebaseCreate,
+    datos: schemas.TokenFirebaseRequest,
     db: Session = Depends(get_db),
     usuario_actual: models.Usuario = Depends(get_current_user)
 ):
+    # Eliminar cualquier otro usuario que tenga este token
+    db.query(models.TokenFirebase).filter(models.TokenFirebase.token == datos.token_firebase).delete()
+
+    # Buscar si ya existe un registro de token para este usuario
     existente = db.query(models.TokenFirebase).filter_by(id_usuario=usuario_actual.id_usuario).first()
 
     if existente:
-        existente.token = token_data.token
+        existente.token = datos.token_firebase
     else:
-        nuevo_token = models.TokenFirebase(id_usuario=usuario_actual.id_usuario, token=token_data.token)
-        db.add(nuevo_token)
+        nuevo = models.TokenFirebase(
+            id_usuario=usuario_actual.id_usuario,
+            token=datos.token_firebase
+        )
+        db.add(nuevo)
 
     db.commit()
-    return {"mensaje": "Token Firebase registrado correctamente"}
+    return {"mensaje": "Token registrado correctamente"}

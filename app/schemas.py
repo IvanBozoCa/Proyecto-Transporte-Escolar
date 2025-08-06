@@ -638,3 +638,7 @@ class RutaFijaResponse(BaseModel):
 class EstudianteAConductor(BaseModel):
     id_estudiante: int
     id_usuario_conductor: int  
+    
+    
+class TokenFirebaseRequest(BaseModel):
+    token_firebase: str
