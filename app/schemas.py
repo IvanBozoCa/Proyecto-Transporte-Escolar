@@ -69,7 +69,7 @@ class Coordenadas(BaseModel):
 
 class EstudianteCreate(BaseModel):
     nombre: str
-    edad: int
+    edad: Optional[int]
     colegio: Optional[str] = None
     casa: Optional[str]
     lat_casa: Optional[float]
