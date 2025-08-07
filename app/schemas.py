@@ -84,7 +84,7 @@ class EstudianteCreate(BaseModel):
 class EstudianteResponse(BaseModel):
     id_estudiante: int
     nombre: str
-    edad: int
+    edad: Optional[int]
     curso: Optional[str] 
     colegio: Optional[str]
     casa: Optional[str]  
@@ -116,7 +116,7 @@ class EstudianteUpdate(BaseModel):
 class EstudianteSimple(BaseModel):
     id_estudiante: int
     nombre: str
-    edad: int
+    edad: Optional[int]
     colegio: Optional[str] = None
     curso: Optional[str] = None
     colegio: Optional[str] = None
@@ -149,7 +149,7 @@ class EstudianteConConductor(BaseModel):
 class EstudianteEnConductor(BaseModel):
     id_estudiante: int
     nombre: str
-    edad: int
+    edad: Optional[int]
     curso: Optional[str]
     colegio: Optional[str]
     casa: Optional[str]
