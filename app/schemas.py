@@ -434,9 +434,9 @@ class RutaResumen(BaseModel):
         
 class EstudianteConAsistenciaHoy(BaseModel):
     id_estudiante: int
-    nombre: str
-    curso: str
-    colegio: str
+    nombre: Optional[str]
+    curso: Optional[str]
+    colegio: Optional[str]
     asistencia: Optional[AsistenciaHoyResponse] = None
     ruta: Optional[RutaResumen] = None 
     recogido: Optional[bool] = None
@@ -450,8 +450,8 @@ class EstudianteConAsistenciaHoy(BaseModel):
 class EstudianteHoyConParada(BaseModel):
     id_estudiante: int
     nombre: str
-    curso: str
-    colegio: str
+    curso: Optional[str]
+    colegio: Optional[str]
     asistencia: Optional[AsistenciaHoyResponse] = None
     recogido: Optional[bool] = None
     entregado: Optional[bool] = None
