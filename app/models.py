@@ -26,8 +26,8 @@ class Conductor(Base):
     __tablename__ = "conductores"
     id_conductor = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario", ondelete="CASCADE"), unique=True, nullable=False)
-    patente = Column(Text)
-    modelo_vehiculo = Column(Text)
+    patente = Column(Text,nullable=True)
+    modelo_vehiculo = Column(Text,nullable=True)
     id_acompanante = Column(Integer, ForeignKey("acompanantes.id_acompanante"), nullable=True)
     casa = Column(String, nullable=True)
     lat_casa = Column(DECIMAL(9, 6), nullable=True)
