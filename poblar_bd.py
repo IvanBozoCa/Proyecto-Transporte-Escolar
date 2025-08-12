@@ -15,7 +15,6 @@ tablas = [
     models.TokenFirebase,
     models.ParadaRutaFija,
     models.RutaFija,
-    models.Vinculo,
     models.Notificacion,
     models.Asistencia,
     models.Parada,
@@ -46,7 +45,6 @@ secuencias = [
     "paradas_id_parada_seq",
     "asistencias_id_asistencia_seq",
     "notificaciones_id_notificacion_seq",
-    "vinculos_apoderado_conductor_id_vinculo_seq",
     "rutas_fijas_id_ruta_fija_seq",
     "paradas_ruta_fija_id_parada_ruta_fija_seq",
     "token_firebase_id_token_seq"
@@ -65,27 +63,21 @@ db.commit()
 print("Creando administradores...")
 admin1 = models.Usuario(
     nombre="ivan",
-    email="ivan@example.com",
+    email="ivan.bozo@pregrado.uoh.cl",
     telefono="111111111",
     tipo_usuario="administrador",
-    contrasena=hash_contrasena("admin123")
+    contrasena=hash_contrasena("Admin#123")
 )
 admin2 = models.Usuario(
     nombre="lukas",
-    email="lukas@example.com",
+    email="lukas.flores@pregrado.uoh.cl",
     telefono="222222222",
     tipo_usuario="administrador",
-    contrasena=hash_contrasena("admin123")
-)
-admin3 = models.Usuario(
-    nombre="Ivan Bozo",
-    email="ivan@gmail.com",
-    telefono="333333333",
-    tipo_usuario="administrador",
-    contrasena=hash_contrasena("admin123")
+    contrasena=hash_contrasena("Admin#123")
 )
 
-db.add_all([admin1, admin2, admin3])
+
+db.add_all([admin1, admin2])
 db.commit()
 
 print("Todo listo: base de datos limpia y administradores creados.")

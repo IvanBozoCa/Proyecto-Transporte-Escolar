@@ -226,9 +226,9 @@ class AcompananteResponse(BaseModel):
 # ---------- CONDUCTOR ----------
 
 class ConductorCreateDatos(BaseModel):
-    patente: str
-    modelo_vehiculo: str
-    casa: str
+    patente: Optional[str]
+    modelo_vehiculo: Optional[str]
+    casa: Optional[str]
     lat_casa: Optional[float]
     long_casa: Optional[float]
     
@@ -262,10 +262,10 @@ class ConductorCompleto(BaseModel):
 class ConductorConEstudiantes(BaseModel):
     id_usuario: int
     nombre: str
-    email: str
-    telefono: str
-    patente: str
-    modelo_vehiculo: str
+    email: Optional[str]
+    telefono: Optional[str]
+    patente: Optional[str]
+    modelo_vehiculo: Optional[str]
 
     estudiantes: List[EstudianteEnConductor] = []
 
@@ -318,9 +318,9 @@ class ConductorConAcompanante(BaseModel):
     id_usuario: int
     nombre: str
     email: str
-    telefono: str
-    patente: str
-    modelo_vehiculo: str
+    telefono: Optional[str]
+    patente: Optional[str]
+    modelo_vehiculo: Optional[str]
     acompanante: Optional[NombreAcompanante] = None
 
 
@@ -491,10 +491,10 @@ class FilaListadoGeneral(BaseModel):
 
 class DatosConductor(BaseModel):
     patente: str
-    modelo_vehiculo: str
-    casa: Optional[str] = None
-    lat_casa: Optional[float] = None
-    long_casa: Optional[float] = None
+    modelo_vehiculo: Optional[str]
+    casa: Optional[str]
+    lat_casa: Optional[float] 
+    long_casa: Optional[float] 
     class Config:
         from_attributes = True
 
@@ -534,10 +534,10 @@ class UsuarioConDatos(BaseModel):
     email: EmailStr
     telefono: str
     tipo_usuario: str
-    datos_conductor: Optional[DatosConductor] = None
-    datos_apoderado: Optional[DatosApoderado] = None
-    datos_acompanante: Optional[DatosAcompanante] = None
-    direccion_estudiante: Optional[DireccionEstudiante] = None
+    datos_conductor: Optional[DatosConductor] 
+    datos_apoderado: Optional[DatosApoderado] 
+    datos_acompanante: Optional[DatosAcompanante]
+    direccion_estudiante: Optional[DireccionEstudiante]
     
     class Config:
         from_attributes = True
@@ -546,7 +546,7 @@ class UsuarioConDatos(BaseModel):
 # ======= Ruta Fija =======
 
 class ParadaRutaFijaCreate(BaseModel):
-    id_estudiante: Optional[int] = None  
+    id_estudiante: Optional[int]  
     orden: int
     es_destino_final: Optional[bool] = False
 
