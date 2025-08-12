@@ -281,21 +281,21 @@ class ConductorUpdateDatos(BaseModel):
 
 class ConductorDetalle(BaseModel):
     usuario: UsuarioBase
-    datos_conductor: ConductorUpdateDatos
+    datos_conductor: Optional[ConductorUpdateDatos]
 
     class Config:
         from_attributes = True
 class ConductorCompletoCreate(BaseModel):
     usuario: UsuarioCreate
-    datos_conductor: DatosConductorSchema
+    datos_conductor: Optional[DatosConductorSchema]
 
 class ConductorCompletoupdate(BaseModel):
     usuario: UsuarioUpdate
-    datos_conductor: ConductorUpdateDatos
+    datos_conductor: Optional[ConductorUpdateDatos]
 
 class ConductorCompletoResponse(BaseModel):
     usuario: UsuarioResponse
-    datos_conductor: DatosConductorSchema
+    datos_conductor: Optional[DatosConductorSchema]
 
 class UbicacionConductorCreate(BaseModel):
     latitud: float
