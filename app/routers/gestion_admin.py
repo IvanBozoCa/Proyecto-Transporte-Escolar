@@ -428,7 +428,7 @@ def listar_todos_los_usuarios(
 
     return resultado
 
-@router.get("/apoderado/{id_usuario}", response_model=schemas.ApoderadoConEstudiantes)
+@router.get("/apoderado/{id_usuario}", response_model=schemas.ApoderadoYEstudianteResponse)
 def obtener_apoderado_por_id(
     id_usuario: int,
     db: Session = Depends(get_db),
@@ -438,38 +438,44 @@ def obtener_apoderado_por_id(
     if not apoderado:
         raise HTTPException(status_code=404, detail="Apoderado no encontrado")
 
-    usuario = apoderado.usuario 
+    usuario = apoderado.usuario
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
 
-    estudiantes = []
+    estudiantes_respuesta: list[schemas.EstudianteResponse] = []
     for e in apoderado.estudiantes:
         id_usuario_conductor = None
-        if e.conductor:
-            id_usuario_conductor = e.conductor.id_usuario
+        if e.conductor and e.conductor.usuario:
+            id_usuario_conductor = e.conductor.usuario.id_usuario
 
-        estudiantes.append(
-            schemas.EstudianteSimple(
+        estudiantes_respuesta.append(
+            schemas.EstudianteResponse(
                 id_estudiante=e.id_estudiante,
                 nombre=e.nombre,
                 edad=e.edad,
                 curso=e.curso,
+                colegio=e.colegio,
                 casa=e.casa,
                 lat_casa=e.lat_casa,
                 long_casa=e.long_casa,
-                colegio=e.colegio,
                 lat_colegio=e.lat_colegio,
                 long_colegio=e.long_colegio,
+                nombre_apoderado_secundario=e.nombre_apoderado_secundario,
+                telefono_apoderado_secundario=e.telefono_apoderado_secundario,
                 id_usuario_conductor=id_usuario_conductor
             )
         )
 
-    return schemas.ApoderadoConEstudiantes(
-        id_usuario=usuario.id_usuario,
-        nombre=usuario.nombre,
-        email=usuario.email,
-        telefono=usuario.telefono,
-       # contrasena=usuario.contrasena,
-        estudiantes=estudiantes
+    return schemas.ApoderadoYEstudianteResponse(
+        apoderado=schemas.UsuarioResponse(
+            nombre=usuario.nombre,
+            email=usuario.email,
+            telefono=usuario.telefono,
+            tipo_usuario=usuario.tipo_usuario
+        ),
+        estudiante=estudiantes_respuesta
     )
+
 
 
 @router.put("/usuario/{id_usuario}", response_model=schemas.UsuarioResponse)
