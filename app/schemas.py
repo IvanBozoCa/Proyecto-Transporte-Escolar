@@ -69,17 +69,17 @@ class Coordenadas(BaseModel):
 
 class EstudianteCreate(BaseModel):
     nombre: str
-    edad: Optional[int]
-    colegio: Optional[str] 
-    casa: Optional[str]
-    lat_casa: Optional[float]
-    long_casa: Optional[float]
-    lat_colegio: Optional[float]
-    long_colegio: Optional[float]
-    curso: Optional[str] 
-    nombre_apoderado_secundario: Optional[str] 
-    telefono_apoderado_secundario: Optional[str] 
-    id_usuario_conductor: Optional[int]
+    edad: Optional[int] = None   
+    colegio: Optional[str]  = None   
+    casa: Optional[str] = None   
+    lat_casa: Optional[float] = None   
+    long_casa: Optional[float] = None   
+    lat_colegio: Optional[float] = None   
+    long_colegio: Optional[float] = None   
+    curso: Optional[str]  = None   
+    nombre_apoderado_secundario: Optional[str] = None    
+    telefono_apoderado_secundario: Optional[str]  = None   
+    id_usuario_conductor: Optional[int] = None   
 
 class EstudianteResponse(BaseModel):
     id_estudiante: int
