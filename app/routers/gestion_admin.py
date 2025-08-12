@@ -550,52 +550,110 @@ def editar_apoderado_con_estudiante(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario asociado no encontrado")
 
-    email_existente = db.query(models.Usuario).filter(
-        models.Usuario.email == datos.apoderado.email,
-        models.Usuario.id_usuario != usuario.id_usuario
-    ).first()
-    if email_existente:
-        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
+    # Validación de email duplicado (si lo cambiaron)
+    if datos.apoderado.email:
+        email_existente = db.query(models.Usuario).filter(
+            models.Usuario.email == datos.apoderado.email,
+            models.Usuario.id_usuario != usuario.id_usuario
+        ).first()
+        if email_existente:
+            raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
 
-    usuario.nombre = datos.apoderado.nombre
-    usuario.email = datos.apoderado.email
-    usuario.telefono = datos.apoderado.telefono
+    # Actualizar datos del apoderado (usuario)
+    if datos.apoderado.nombre is not None:
+        usuario.nombre = datos.apoderado.nombre
+    if datos.apoderado.email is not None:
+        usuario.email = datos.apoderado.email
+    if datos.apoderado.telefono is not None:
+        usuario.telefono = datos.apoderado.telefono
 
-    if datos.apoderado.contrasena:
+    if getattr(datos.apoderado, "contrasena", None):
         validar_contrasena(datos.apoderado.contrasena)
         usuario.contrasena = hash_contrasena(datos.apoderado.contrasena)
 
-    estudiantes_respuesta = []
+    estudiantes_respuesta: list[schemas.EstudianteResponse] = []
 
     for estudiante_input in datos.estudiante:
-        estudiante = db.query(models.Estudiante).filter_by(
-            id_estudiante=estudiante_input.id_estudiante,
-            id_apoderado=apoderado.id_apoderado
-        ).first()
+        # Para cada item, si viene id_estudiante -> UPDATE, si no -> CREATE
+        usuario_conductor = None
 
-        if not estudiante:
-            raise HTTPException(status_code=404, detail=f"Estudiante con ID {estudiante_input.id_estudiante} no encontrado.")
+        if getattr(estudiante_input, "id_estudiante", None):
+            # ----- UPDATE -----
+            estudiante = db.query(models.Estudiante).filter_by(
+                id_estudiante=estudiante_input.id_estudiante,
+                id_apoderado=apoderado.id_apoderado
+            ).first()
 
-        estudiante.nombre = estudiante_input.nombre
-        estudiante.edad = estudiante_input.edad
-        estudiante.nombre_apoderado_secundario = estudiante_input.nombre_apoderado_secundario
-        estudiante.telefono_apoderado_secundario = estudiante_input.telefono_apoderado_secundario
-        estudiante.curso = estudiante_input.curso
-        estudiante.colegio = estudiante_input.colegio
-        estudiante.lat_casa = estudiante_input.lat_casa
-        estudiante.long_casa = estudiante_input.long_casa
-        estudiante.lat_colegio = estudiante_input.lat_colegio
-        estudiante.long_colegio = estudiante_input.long_colegio
+            if not estudiante:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Estudiante con ID {estudiante_input.id_estudiante} no encontrado."
+                )
 
-        if estudiante_input.id_usuario_conductor is not None:
-            conductor = db.query(models.Conductor).filter_by(id_usuario=estudiante_input.id_usuario_conductor).first()
-            if not conductor:
-                raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
-            estudiante.id_conductor = conductor.id_conductor
-            usuario_conductor = conductor.id_usuario
+            # Actualizar campos (mantén tu estilo campo a campo)
+            estudiante.nombre = estudiante_input.nombre
+            estudiante.edad = estudiante_input.edad
+            estudiante.nombre_apoderado_secundario = estudiante_input.nombre_apoderado_secundario
+            estudiante.telefono_apoderado_secundario = estudiante_input.telefono_apoderado_secundario
+            estudiante.curso = estudiante_input.curso
+            estudiante.colegio = estudiante_input.colegio
+            estudiante.lat_casa = estudiante_input.lat_casa
+            estudiante.long_casa = estudiante_input.long_casa
+            estudiante.lat_colegio = estudiante_input.lat_colegio
+            estudiante.long_colegio = estudiante_input.long_colegio
+
+            if estudiante_input.id_usuario_conductor is not None:
+                conductor = db.query(models.Conductor).filter_by(
+                    id_usuario=estudiante_input.id_usuario_conductor
+                ).first()
+                if not conductor:
+                    raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
+                estudiante.id_conductor = conductor.id_conductor
+                usuario_conductor = conductor.id_usuario
+            else:
+                usuario_conductor = estudiante.conductor.id_usuario if estudiante.conductor else None
+
         else:
-            usuario_conductor = estudiante.conductor.id_usuario if estudiante.conductor else None
+            # ----- CREATE (no viene id_estudiante) -----
+            id_conductor_final = None
+            if estudiante_input.id_usuario_conductor:
+                conductor = db.query(models.Conductor).filter_by(
+                    id_usuario=estudiante_input.id_usuario_conductor
+                ).first()
+                if not conductor:
+                    raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
+                id_conductor_final = conductor.id_conductor
+                usuario_conductor = conductor.id_usuario
 
+            nuevo_estudiante = models.Estudiante(
+                nombre=estudiante_input.nombre,
+                edad=estudiante_input.edad,
+                id_apoderado=apoderado.id_apoderado,
+                colegio=estudiante_input.colegio,
+                casa=estudiante_input.casa,
+                curso=estudiante_input.curso,
+                lat_casa=estudiante_input.lat_casa,
+                long_casa=estudiante_input.long_casa,
+                lat_colegio=estudiante_input.lat_colegio,
+                long_colegio=estudiante_input.long_colegio,
+                nombre_apoderado_secundario=estudiante_input.nombre_apoderado_secundario,
+                telefono_apoderado_secundario=estudiante_input.telefono_apoderado_secundario,
+                id_conductor=id_conductor_final
+            )
+            db.add(nuevo_estudiante)
+            db.flush()  # para obtener id_estudiante sin commitear
+
+            # (Opcional) crear asistencia por defecto como en el POST
+            nueva_asistencia = models.Asistencia(
+                id_estudiante=nuevo_estudiante.id_estudiante,
+                fecha=date.today(),
+                asiste=True
+            )
+            db.add(nueva_asistencia)
+
+            estudiante = nuevo_estudiante  # para construir la respuesta
+
+        # Armar respuesta de este estudiante (tanto en update como en create)
         estudiantes_respuesta.append(
             schemas.EstudianteResponse(
                 id_estudiante=estudiante.id_estudiante,
