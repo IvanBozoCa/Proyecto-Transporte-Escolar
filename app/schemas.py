@@ -32,10 +32,10 @@ class ReiniciarContrasenaInput(BaseModel):
     nueva_contrasena: str
 
 class UsuarioUpdate(BaseModel):
-    nombre: Optional[str] 
-    email: Optional[EmailStr] 
-    telefono: Optional[str] 
-    contrasena: Optional[str]
+    nombre: Optional[str] = None  
+    email: Optional[EmailStr] = None  
+    telefono: Optional[str] = None  
+    contrasena: Optional[str]= None  
     
     class Config:
         from_attributes = True
