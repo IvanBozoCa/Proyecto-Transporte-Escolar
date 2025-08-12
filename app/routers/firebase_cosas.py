@@ -12,7 +12,7 @@ router = APIRouter(
 )
 
 
-@router.post("/registrar-token")
+@router.post("/RegistrarToken")
 def registrar_token_firebase(
     datos: schemas.TokenFirebaseRequest,
     db: Session = Depends(get_db),
