@@ -87,7 +87,7 @@ class EstudianteResponse(BaseModel):
     edad: Optional[int]
     curso: Optional[str] 
     colegio: Optional[str]
-    casa: Optional[str]  
+    casa: Optional[str]  = None
     lat_casa: Optional[float]
     long_casa: Optional[float]
     lat_colegio: Optional[float]
