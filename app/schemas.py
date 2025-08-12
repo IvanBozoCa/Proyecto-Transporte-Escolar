@@ -92,26 +92,26 @@ class EstudianteResponse(BaseModel):
     long_casa: Optional[float]
     lat_colegio: Optional[float]
     long_colegio: Optional[float]
-    nombre_apoderado_secundario: Optional[str] 
-    telefono_apoderado_secundario: Optional[str] 
+    nombre_apoderado_secundario: Optional[str] = None   
+    telefono_apoderado_secundario: Optional[str] = None   
     id_usuario_conductor: Optional[int]
     class Config:
         from_attributes = True
 
 class EstudianteUpdate(BaseModel):
-    id_estudiante: Optional[int]  
-    nombre: Optional[str]
-    edad: Optional[int]
-    curso: Optional[str] 
-    colegio: Optional[str]
-    casa: Optional[str]  # texto
-    lat_casa: Optional[float]
-    long_casa: Optional[float]
-    lat_colegio: Optional[float]
-    long_colegio: Optional[float]
-    nombre_apoderado_secundario: Optional[str]
-    telefono_apoderado_secundario: Optional[str]
-    id_usuario_conductor: Optional[int]
+    id_estudiante: Optional[int] = None   
+    nombre: Optional[str]= None  
+    edad: Optional[int]= None  
+    curso: Optional[str] = None  
+    colegio: Optional[str]= None  
+    casa: Optional[str] = None     # texto
+    lat_casa: Optional[float]= None  
+    long_casa: Optional[float]= None  
+    lat_colegio: Optional[float]= None  
+    long_colegio: Optional[float]= None  
+    nombre_apoderado_secundario: Optional[str] = None   
+    telefono_apoderado_secundario: Optional[str] = None   
+    id_usuario_conductor: Optional[int]= None  
     
 class EstudianteSimple(BaseModel):
     id_estudiante: int
