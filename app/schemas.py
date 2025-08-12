@@ -117,17 +117,17 @@ class EstudianteSimple(BaseModel):
     id_estudiante: int
     nombre: str
     edad: Optional[int]
-    colegio: Optional[str] 
-    curso: Optional[str] 
-    colegio: Optional[str] 
-    casa: Optional[str]
-    lat_casa: Optional[float] 
-    long_casa: Optional[float] 
-    lat_colegio: Optional[float]
-    long_colegio: Optional[float]
-    nombre_apoderado_secundario: Optional[str] 
-    telefono_apoderado_secundario: Optional[str] 
-    id_usuario_conductor: Optional[int]
+    colegio: Optional[str] = None
+    curso: Optional[str] = None
+    colegio: Optional[str] = None
+    casa: Optional[str]= None
+    lat_casa: Optional[float] = None
+    long_casa: Optional[float] = None
+    lat_colegio: Optional[float]= None
+    long_colegio: Optional[float]= None
+    nombre_apoderado_secundario: Optional[str] = None
+    telefono_apoderado_secundario: Optional[str] = None
+    id_usuario_conductor: Optional[int]= None
     class Config:
         from_attributes = True
 
