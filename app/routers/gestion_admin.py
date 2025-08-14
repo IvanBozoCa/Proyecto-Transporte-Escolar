@@ -559,26 +559,31 @@ def editar_apoderado_con_estudiante(
         if email_existente:
             raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado por otro usuario.")
 
-    # Actualizar datos del apoderado (usuario)
+    # Actualizar datos del apoderado
     if datos.apoderado.nombre is not None:
         usuario.nombre = datos.apoderado.nombre
     if datos.apoderado.email is not None:
         usuario.email = datos.apoderado.email
     if datos.apoderado.telefono is not None:
         usuario.telefono = datos.apoderado.telefono
-
     if getattr(datos.apoderado, "contrasena", None):
         validar_contrasena(datos.apoderado.contrasena)
         usuario.contrasena = hash_contrasena(datos.apoderado.contrasena)
 
     estudiantes_respuesta: list[schemas.EstudianteResponse] = []
 
+    ids_recibidos = [e.id_estudiante for e in datos.estudiante if getattr(e, "id_estudiante", None)]
+    estudiantes_actuales = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
+
+    for estudiante in estudiantes_actuales:
+        if estudiante.id_estudiante not in ids_recibidos:
+            db.delete(estudiante)
+
     for estudiante_input in datos.estudiante:
-        # Para cada item, si viene id_estudiante -> UPDATE, si no -> CREATE
         usuario_conductor = None
 
         if getattr(estudiante_input, "id_estudiante", None):
-            # ----- UPDATE -----
+            # UPDATE
             estudiante = db.query(models.Estudiante).filter_by(
                 id_estudiante=estudiante_input.id_estudiante,
                 id_apoderado=apoderado.id_apoderado
@@ -590,7 +595,6 @@ def editar_apoderado_con_estudiante(
                     detail=f"Estudiante con ID {estudiante_input.id_estudiante} no encontrado."
                 )
 
-            # Actualizar campos (mantén tu estilo campo a campo)
             estudiante.nombre = estudiante_input.nombre
             estudiante.edad = estudiante_input.edad
             estudiante.nombre_apoderado_secundario = estudiante_input.nombre_apoderado_secundario
@@ -614,7 +618,7 @@ def editar_apoderado_con_estudiante(
                 usuario_conductor = estudiante.conductor.id_usuario if estudiante.conductor else None
 
         else:
-            # ----- CREATE (no viene id_estudiante) -----
+            # CREATE
             id_conductor_final = None
             if estudiante_input.id_usuario_conductor:
                 conductor = db.query(models.Conductor).filter_by(
@@ -641,9 +645,8 @@ def editar_apoderado_con_estudiante(
                 id_conductor=id_conductor_final
             )
             db.add(nuevo_estudiante)
-            db.flush()  # para obtener id_estudiante sin commitear
+            db.flush()
 
-            # (Opcional) crear asistencia por defecto como en el POST
             nueva_asistencia = models.Asistencia(
                 id_estudiante=nuevo_estudiante.id_estudiante,
                 fecha=date.today(),
@@ -651,9 +654,8 @@ def editar_apoderado_con_estudiante(
             )
             db.add(nueva_asistencia)
 
-            estudiante = nuevo_estudiante  # para construir la respuesta
+            estudiante = nuevo_estudiante
 
-        # Armar respuesta de este estudiante (tanto en update como en create)
         estudiantes_respuesta.append(
             schemas.EstudianteResponse(
                 id_estudiante=estudiante.id_estudiante,
@@ -679,6 +681,7 @@ def editar_apoderado_con_estudiante(
         apoderado=schemas.UsuarioResponse.from_orm(usuario),
         estudiante=estudiantes_respuesta
     )
+
 
 
 
