@@ -631,6 +631,7 @@ class RutaFijaResponse(BaseModel):
     id_usuario_conductor: int
     paradas: List[ParadaEstudianteRutaFijaResponse]
     parada_final: Optional[ParadaFinalRutaFijaResponse] = None
+    tipo: str
 
     class Config:
         from_attributes = True

@@ -182,7 +182,7 @@ class RutaFija(Base):
     id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"))
     descripcion = Column(String, nullable=False)
     nombre = Column(String, nullable=False)
-
+    tipo = Column(String, default="ida")
     conductor = relationship("Conductor", back_populates="rutas_fijas")
     paradas = relationship("ParadaRutaFija", back_populates="ruta", cascade="all, delete-orphan")
 
