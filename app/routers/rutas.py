@@ -21,6 +21,23 @@ def crear_ruta_fija(
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
 
+    # Validación de orden secuencial
+    if ruta.paradas_estudiantes:
+        ordenes = [p.orden for p in ruta.paradas_estudiantes if p.orden is not None]
+
+        if len(ordenes) != len(ruta.paradas_estudiantes):
+            raise HTTPException(status_code=400, detail="Todas las paradas deben tener un valor de 'orden' definido.")
+
+        if len(set(ordenes)) != len(ordenes):
+            raise HTTPException(status_code=400, detail="Los valores de 'orden' deben ser únicos.")
+
+        ordenes_ordenadas = sorted(ordenes)
+        if ordenes_ordenadas != list(range(1, len(ordenes_ordenadas) + 1)):
+            raise HTTPException(
+                status_code=400,
+                detail="Los valores de 'orden' deben ser secuenciales sin saltos, comenzando desde 1."
+            )
+
     # ----- Crear Ruta Fija IDA -----
     ruta_ida = models.RutaFija(
         id_conductor=conductor.id_conductor,
