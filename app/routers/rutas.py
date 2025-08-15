@@ -27,6 +27,7 @@ def crear_ruta_fija(
         id_conductor=conductor.id_conductor,
         nombre=ruta.nombre,
         descripcion=ruta.descripcion,
+        tipo="ida"
     )
     db.add(ruta_ida)
     db.flush()
@@ -68,7 +69,8 @@ def crear_ruta_fija(
     ruta_vuelta = models.RutaFija(
         id_conductor=conductor.id_conductor,
         nombre=nombre_vuelta,
-        descripcion=f"(Automática) Ruta de retorno de: {ruta.nombre}"
+        descripcion=f"Ruta de retorno de: {ruta.nombre}",
+        tipo="vuelta"
     )
     db.add(ruta_vuelta)
     db.flush()
@@ -135,6 +137,7 @@ def crear_ruta_fija(
         id_ruta_fija=ruta_ida.id_ruta_fija,
         nombre=ruta_ida.nombre,
         descripcion=ruta_ida.descripcion,
+        tipo=ruta_ida.tipo,
         id_usuario_conductor=conductor.id_usuario,
         paradas=paradas_estudiantes_response,
         parada_final=parada_final_response
@@ -186,6 +189,7 @@ def obtener_rutas_fijas_completas(
                 id_ruta_fija=ruta.id_ruta_fija,
                 nombre=ruta.nombre,
                 descripcion=ruta.descripcion,
+                tipo=ruta.tipo,
                 id_usuario_conductor=id_usuario_conductor,
                 paradas=paradas_estudiantes,
                 parada_final=parada_final
@@ -241,6 +245,7 @@ def obtener_ruta_fija_por_id(
         nombre=ruta.nombre,
         descripcion=ruta.descripcion,
         id_usuario_conductor=id_usuario_conductor,
+        tipo=ruta.tipo,
         paradas=paradas_estudiantes,
         parada_final=parada_final
     )
@@ -351,6 +356,7 @@ def editar_ruta_fija(
         id_ruta_fija=ruta.id_ruta_fija,
         nombre=ruta.nombre,
         descripcion=ruta.descripcion,
+        tipo=ruta.tipo,
         id_usuario_conductor=conductor_usuario_id,
         paradas=paradas_estudiantes,
         parada_final=parada_final
