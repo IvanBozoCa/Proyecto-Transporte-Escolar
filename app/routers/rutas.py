@@ -17,7 +17,6 @@ def crear_ruta_fija(
     if usuario_actual.tipo_usuario != "administrador":
         raise HTTPException(status_code=403, detail="Solo administradores pueden crear rutas fijas.")
 
-    # Buscar conductor
     conductor = db.query(models.Conductor).filter_by(id_usuario=ruta.id_usuario_conductor).first()
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado con ese ID de usuario.")
@@ -32,7 +31,6 @@ def crear_ruta_fija(
     db.add(ruta_ida)
     db.flush()
 
-    # Agregar paradas estudiantes a IDA
     paradas_ida = []
     for parada in ruta.paradas_estudiantes:
         estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada.id_estudiante).first()
@@ -50,7 +48,6 @@ def crear_ruta_fija(
         db.add(parada_ida)
         paradas_ida.append((parada_ida, estudiante))
 
-    # Agregar parada final (colegio) si existe
     parada_final_ida = None
     if ruta.parada_final:
         orden_final = ruta.parada_final.orden or (len(ruta.paradas_estudiantes) + 1)
@@ -75,23 +72,12 @@ def crear_ruta_fija(
     db.add(ruta_vuelta)
     db.flush()
 
+    # Paradas hacia casa en orden inverso (sin colegio)
+    paradas_reversas = list(reversed(paradas_ida))
+    total = len(paradas_reversas)
+
     orden = 1
-
-    # Colegio como primera parada en ruta de vuelta
-    if parada_final_ida:
-        parada_colegio_vuelta = models.ParadaRutaFija(
-            id_ruta_fija=ruta_vuelta.id_ruta_fija,
-            id_estudiante=None,
-            latitud=parada_final_ida.latitud,
-            longitud=parada_final_ida.longitud,
-            orden=orden,
-            es_destino_final=True  # Colegio como punto de partida
-        )
-        db.add(parada_colegio_vuelta)
-        orden += 1
-
-    # Paradas hacia casa en orden inverso
-    for parada_ida, estudiante in reversed(paradas_ida):
+    for idx, (parada_ida, estudiante) in enumerate(paradas_reversas):
         parada_vuelta = models.ParadaRutaFija(
             id_ruta_fija=ruta_vuelta.id_ruta_fija,
             id_estudiante=estudiante.id_estudiante,
@@ -103,10 +89,21 @@ def crear_ruta_fija(
         db.add(parada_vuelta)
         orden += 1
 
+    if paradas_reversas:
+        estudiante_final = paradas_reversas[-1][1]
+        parada_final_vuelta = models.ParadaRutaFija(
+            id_ruta_fija=ruta_vuelta.id_ruta_fija,
+            id_estudiante=estudiante_final.id_estudiante,
+            latitud=estudiante_final.lat_casa,
+            longitud=estudiante_final.long_casa,
+            orden=orden,
+            es_destino_final=True
+        )
+        db.add(parada_final_vuelta)
+
     db.commit()
     db.refresh(ruta_ida)
 
-    # Obtener paradas ordenadas para la respuesta
     paradas_db = (
         db.query(models.ParadaRutaFija)
         .filter_by(id_ruta_fija=ruta_ida.id_ruta_fija)
@@ -124,7 +121,7 @@ def crear_ruta_fija(
                 latitud=parada.latitud,
                 longitud=parada.longitud
             )
-        else:
+        elif parada.estudiante:
             paradas_estudiantes_response.append(
                 schemas.ParadaEstudianteRutaFijaResponse(
                     id_parada_ruta_fija=parada.id_parada_ruta_fija,
@@ -170,19 +167,19 @@ def obtener_rutas_fijas_completas(
         for parada in paradas_db:
             if parada.es_destino_final:
                 parada_final = schemas.ParadaFinalRutaFijaResponse(
-                    id_parada_ruta_fija=parada.id_parada_ruta_fija,
-                    orden=parada.orden,
-                    latitud=parada.latitud,
-                    longitud=parada.longitud
-                )
-            else:
+                id_parada_ruta_fija=parada.id_parada_ruta_fija,
+                orden=parada.orden,
+                latitud=parada.latitud,
+                longitud=parada.longitud
+        )
+            elif parada.estudiante:
                 paradas_estudiantes.append(
                     schemas.ParadaEstudianteRutaFijaResponse(
                         id_parada_ruta_fija=parada.id_parada_ruta_fija,
                         orden=parada.orden,
                         estudiante=schemas.EstudianteBasico.from_orm(parada.estudiante)
-                    )
-                )
+            )
+        )
 
         resultados.append(
             schemas.RutaFijaResponse(
@@ -226,19 +223,19 @@ def obtener_ruta_fija_por_id(
     for parada in paradas_db:
         if parada.es_destino_final:
             parada_final = schemas.ParadaFinalRutaFijaResponse(
-                id_parada_ruta_fija=parada.id_parada_ruta_fija,
-                orden=parada.orden,
-                latitud=parada.latitud,
-                longitud=parada.longitud
-            )
-        else:
+            id_parada_ruta_fija=parada.id_parada_ruta_fija,
+            orden=parada.orden,
+            latitud=parada.latitud,
+            longitud=parada.longitud
+        )
+        elif parada.estudiante:
             paradas_estudiantes.append(
                 schemas.ParadaEstudianteRutaFijaResponse(
                     id_parada_ruta_fija=parada.id_parada_ruta_fija,
                     orden=parada.orden,
                     estudiante=schemas.EstudianteBasico.from_orm(parada.estudiante)
-                )
             )
+        )
 
     return schemas.RutaFijaResponse(
         id_ruta_fija=ruta.id_ruta_fija,
@@ -262,13 +259,13 @@ def editar_ruta_fija(
     if not ruta:
         raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
 
-    # Actualizar campos básicos
+    tipo_ruta = ruta.tipo  # mantener tipo
+
     if datos.nombre is not None:
         ruta.nombre = datos.nombre
     if datos.descripcion is not None:
         ruta.descripcion = datos.descripcion
 
-    # Actualizar el conductor si se proporciona
     if datos.id_usuario_conductor is not None:
         conductor = db.query(models.Conductor).filter_by(id_usuario=datos.id_usuario_conductor).first()
         if not conductor:
@@ -279,12 +276,12 @@ def editar_ruta_fija(
         conductor = db.query(models.Conductor).filter_by(id_conductor=ruta.id_conductor).first()
         conductor_usuario_id = conductor.id_usuario if conductor else None
 
-    # Eliminar paradas antiguas
+    # Eliminar paradas anteriores
     db.query(models.ParadaRutaFija).filter_by(id_ruta_fija=id_ruta_fija).delete()
 
+    estudiantes_ordenados = []
     orden_max = 0
 
-    # Agregar paradas de estudiantes
     if datos.paradas_estudiantes:
         for parada in datos.paradas_estudiantes:
             estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada.id_estudiante).first()
@@ -302,21 +299,35 @@ def editar_ruta_fija(
                 es_destino_final=False
             )
             db.add(parada_db)
+            estudiantes_ordenados.append((orden, estudiante))
             orden_max = orden
 
-    # Agregar parada final
-    if datos.parada_final:
-        orden_final = datos.parada_final.orden if datos.parada_final.orden and datos.parada_final.orden > 0 else orden_max + 1
-
-        parada_final_db = models.ParadaRutaFija(
-            id_ruta_fija=id_ruta_fija,
-            id_estudiante=None,
-            latitud=datos.parada_final.latitud,
-            longitud=datos.parada_final.longitud,
-            orden=orden_final,
-            es_destino_final=True
-        )
-        db.add(parada_final_db)
+    # Parada final según tipo
+    if tipo_ruta == "ida":
+        if datos.parada_final:
+            orden_final = datos.parada_final.orden or (orden_max + 1)
+            parada_final_db = models.ParadaRutaFija(
+                id_ruta_fija=id_ruta_fija,
+                id_estudiante=None,
+                latitud=datos.parada_final.latitud,
+                longitud=datos.parada_final.longitud,
+                orden=orden_final,
+                es_destino_final=True
+            )
+            db.add(parada_final_db)
+    else:
+        # En ruta de vuelta, el último estudiante es la parada final
+        if estudiantes_ordenados:
+            estudiante_final = sorted(estudiantes_ordenados, key=lambda x: x[0])[-1][1]
+            parada_final_db = models.ParadaRutaFija(
+                id_ruta_fija=id_ruta_fija,
+                id_estudiante=estudiante_final.id_estudiante,
+                latitud=estudiante_final.lat_casa,
+                longitud=estudiante_final.long_casa,
+                orden=orden_max + 1,
+                es_destino_final=True
+            )
+            db.add(parada_final_db)
 
     db.commit()
     db.refresh(ruta)
