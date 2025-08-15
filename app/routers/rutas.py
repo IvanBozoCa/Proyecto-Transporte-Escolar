@@ -259,15 +259,15 @@ def editar_ruta_fija(
     if not ruta:
         raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
 
-    tipo_ruta = ruta.tipo
+    tipo_ruta = ruta.tipo  # "ida" o "vuelta"
 
-    # Actualizar nombre y descripción
+    # Actualizar campos básicos
     if datos.nombre is not None:
         ruta.nombre = datos.nombre
     if datos.descripcion is not None:
         ruta.descripcion = datos.descripcion
 
-    # Actualizar conductor
+    # Actualizar conductor si se proporciona
     if datos.id_usuario_conductor is not None:
         conductor = db.query(models.Conductor).filter_by(id_usuario=datos.id_usuario_conductor).first()
         if not conductor:
@@ -278,42 +278,46 @@ def editar_ruta_fija(
         conductor = db.query(models.Conductor).filter_by(id_conductor=ruta.id_conductor).first()
         conductor_usuario_id = conductor.id_usuario if conductor else None
 
-    # Borrar paradas anteriores
+    # Eliminar paradas anteriores
     db.query(models.ParadaRutaFija).filter_by(id_ruta_fija=id_ruta_fija).delete()
 
-    # Lista para guardar info de los estudiantes insertados
-    estudiante_final = None
-    orden_mayor = 0
+    estudiantes_ordenados = []
+    orden_max = 0
 
-    if datos.paradas_estudiantes:
-        for parada in datos.paradas_estudiantes:
-            estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada.id_estudiante).first()
-            if not estudiante:
-                raise HTTPException(status_code=404, detail=f"Estudiante con ID {parada.id_estudiante} no encontrado")
+    # Validación de orden secuencial y sin repeticiones
+    ordenes = sorted([parada.orden for parada in datos.paradas_estudiantes if parada.orden and parada.orden > 0])
+    orden_esperado = list(range(1, len(ordenes) + 1))
+    if ordenes != orden_esperado:
+        raise HTTPException(
+            status_code=400,
+            detail="Los valores de orden deben comenzar en 1 y ser secuenciales sin saltos. Ej: 1, 2, 3..."
+        )
 
-            # Orden explícito o consecutivo
-            orden = parada.orden if parada.orden and parada.orden > 0 else orden_mayor + 1
+    # Agregar paradas estudiantes
+    for parada in datos.paradas_estudiantes:
+        estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada.id_estudiante).first()
+        if not estudiante:
+            raise HTTPException(status_code=404, detail=f"Estudiante con id {parada.id_estudiante} no encontrado")
 
-            parada_db = models.ParadaRutaFija(
-                id_ruta_fija=id_ruta_fija,
-                id_estudiante=estudiante.id_estudiante,
-                latitud=estudiante.lat_casa,
-                longitud=estudiante.long_casa,
-                orden=orden,
-                es_destino_final=False
-            )
-            db.add(parada_db)
+        orden = parada.orden
+        parada_db = models.ParadaRutaFija(
+            id_ruta_fija=id_ruta_fija,
+            id_estudiante=estudiante.id_estudiante,
+            latitud=estudiante.lat_casa,
+            longitud=estudiante.long_casa,
+            orden=orden,
+            es_destino_final=False
+        )
+        db.add(parada_db)
+        estudiantes_ordenados.append((orden, estudiante))
+        orden_max = max(orden_max, orden)
 
-            # Ver si este estudiante tiene el orden mayor
-            if orden > orden_mayor:
-                orden_mayor = orden
-                estudiante_final = estudiante
-
-    # PARADA FINAL
+    # Lógica parada final
     if tipo_ruta == "ida":
+        # Permite actualizar manualmente la parada final (ej: colegio)
         if datos.parada_final:
-            orden_final = datos.parada_final.orden or (orden_mayor + 1)
-            parada_final = models.ParadaRutaFija(
+            orden_final = datos.parada_final.orden or (orden_max + 1)
+            parada_final_db = models.ParadaRutaFija(
                 id_ruta_fija=id_ruta_fija,
                 id_estudiante=None,
                 latitud=datos.parada_final.latitud,
@@ -321,18 +325,21 @@ def editar_ruta_fija(
                 orden=orden_final,
                 es_destino_final=True
             )
-            db.add(parada_final)
-    else:  # vuelta
-        if estudiante_final:
-            parada_final = models.ParadaRutaFija(
+            db.add(parada_final_db)
+
+    elif tipo_ruta == "vuelta":
+        # Último estudiante del orden se usa como parada final
+        if estudiantes_ordenados:
+            estudiante_final = max(estudiantes_ordenados, key=lambda x: x[0])[1]
+            parada_final_db = models.ParadaRutaFija(
                 id_ruta_fija=id_ruta_fija,
                 id_estudiante=estudiante_final.id_estudiante,
                 latitud=estudiante_final.lat_casa,
                 longitud=estudiante_final.long_casa,
-                orden=orden_mayor + 1,
+                orden=orden_max + 1,
                 es_destino_final=True
             )
-            db.add(parada_final)
+            db.add(parada_final_db)
 
     db.commit()
     db.refresh(ruta)
@@ -340,7 +347,7 @@ def editar_ruta_fija(
     # Armar respuesta
     paradas = (
         db.query(models.ParadaRutaFija)
-        .filter_by(id_ruta_fija=ruta.id_ruta_fija)
+        .filter_by(id_ruta_fija=id_ruta_fija)
         .order_by(models.ParadaRutaFija.orden)
         .all()
     )
