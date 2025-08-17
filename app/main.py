@@ -36,12 +36,12 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(login.router, tags=["Autenticación"])
-app.include_router(firebase_cosas.router, tags=["Firebase"])
-app.include_router(usuarios.router, tags=["Usuarios"])
 app.include_router(gestion_admin.router, tags=["Administrador"])
+app.include_router(rutas.router, tags=["Rutas Fijas"])
 app.include_router(conductor.router, tags=["Conductor"])
 app.include_router(apoderado.router, tags=["Apoderado"])
-app.include_router(rutas.router, tags=["Rutas Fijas"])
+app.include_router(usuarios.router, tags=["Usuarios"])
+app.include_router(firebase_cosas.router, tags=["Firebase"])
 @app.get("/")
 def root():
     return {"mensaje": "API para gestión de transporte escolar"}
