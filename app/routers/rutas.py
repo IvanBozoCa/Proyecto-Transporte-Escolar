@@ -157,7 +157,6 @@ def crear_ruta_fija(
         parada_final=parada_final_response
     )
 
-
 @router.get("/RutasFijas", response_model=list[schemas.RutaFijaResponse])
 def obtener_rutas_fijas_completas(
     db: Session = Depends(get_db),
@@ -211,7 +210,6 @@ def obtener_rutas_fijas_completas(
         )
 
     return resultados
-
 
 @router.get("/RutaFija/{id_ruta_fija}", response_model=schemas.RutaFijaResponse)
 def obtener_ruta_fija_por_id(

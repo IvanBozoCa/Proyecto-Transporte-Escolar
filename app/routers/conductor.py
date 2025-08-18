@@ -417,7 +417,7 @@ def recoger_estudiante(
     if not ruta_activa:
         raise HTTPException(status_code=404, detail="No tienes una ruta activa en curso")
 
-    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=ruta_activa.id_ruta_fija).first()
+    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=ruta_activa.id_ruta).first()
     if not ruta_fija:
         raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
 
@@ -626,7 +626,7 @@ def entregar_estudiante(
     if not ruta_activa:
         raise HTTPException(status_code=404, detail="No tienes una ruta activa")
 
-    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=ruta_activa.id_ruta_fija).first()
+    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=ruta_activa.id_ruta).first()
     if not ruta_fija:
         raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
 

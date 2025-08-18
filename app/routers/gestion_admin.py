@@ -110,8 +110,6 @@ def crear_apoderado_con_estudiantes(
         estudiante=estudiantes_respuesta
     )
 
-# ---------- ACOMPAÑANTE ----------
-
 @router.post("/acompanante", response_model=schemas.AcompananteResponse)
 def crear_acompanante(
     acompanante: schemas.AcompananteCreate,
@@ -124,7 +122,6 @@ def crear_acompanante(
     db.refresh(nuevo)
     return nuevo
 
-# ---------- CREAR CONDUCTOR + FURGÓN ----------
 @router.post("/conductor", response_model=schemas.ConductorCompletoResponse)
 def crear_conductor_completo(
 
@@ -198,7 +195,6 @@ def asignar_estudiante_a_conductor(
 
     return {"mensaje": "Estudiante asignado al conductor correctamente"}
 
-    
 @router.post("/AsignarAcompanante")
 def asignar_acompanante_a_conductor(
     id_conductor: int,
@@ -215,9 +211,6 @@ def asignar_acompanante_a_conductor(
     conductor.id_acompanante = id_acompanante
     db.commit()
     return {"mensaje": "Acompañante asignado correctamente"}
-
-
-# ---------- ELIMINACIONES ----------
 
 @router.delete("/apoderado/{id_usuario}")
 def eliminar_apoderado(id_usuario: int, db: Session = Depends(get_db), _: models.Usuario = Depends(verificar_admin)):
@@ -254,9 +247,6 @@ def eliminar_acompanante(id_acompanante: int, db: Session = Depends(get_db), _: 
     db.delete(acompanante)
     db.commit()
     return {"mensaje": "Acompañante eliminado"}
-
-# ---------- GET -----------
-
 
 @router.get("/acompanantes", response_model=List[schemas.AcompananteResponse])
 def listar_acompanantes(
@@ -362,9 +352,6 @@ def obtener_conductores_con_acompanante(
             acompanante=acompanante
         ))
     return resultado
-
-
-
 
 @router.get("/usuarios", response_model=List[schemas.UsuarioConDatos])
 def listar_todos_los_usuarios(
@@ -475,8 +462,6 @@ def obtener_apoderado_por_id(
         ),
         estudiante=estudiantes_respuesta
     )
-
-
 
 @router.put("/usuario/{id_usuario}", response_model=schemas.UsuarioResponse)
 def editar_usuario(
@@ -682,9 +667,6 @@ def editar_apoderado_con_estudiante(
         estudiante=estudiantes_respuesta
     )
 
-
-
-
 @router.put("/conductor/{id_usuario}", response_model=schemas.ConductorCompletoResponse)
 def editar_conductor_completo(
     id_usuario: int,
@@ -753,7 +735,6 @@ def editar_conductor_completo(
         )
     )
 
-
 @router.get("/estudiante/{id_estudiante}", response_model=schemas.EstudianteResponse)
 def obtener_estudiante_por_id(
     id_estudiante: int,
@@ -785,7 +766,6 @@ def obtener_estudiante_por_id(
         id_usuario_conductor=usuario_conductor
     )
     
-
 @router.get("/estudiantes", response_model=list[schemas.EstudianteResponse])
 def obtener_todos_los_estudiantes(
     db: Session = Depends(get_db),
