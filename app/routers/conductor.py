@@ -417,10 +417,6 @@ def recoger_estudiante(
     if not ruta_activa:
         raise HTTPException(status_code=404, detail="No tienes una ruta activa en curso")
 
-    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=ruta_activa.id_ruta).first()
-    if not ruta_fija:
-        raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
-
     parada = db.query(models.Parada).filter_by(
         id_ruta=ruta_activa.id_ruta,
         id_estudiante=id_estudiante
@@ -429,54 +425,32 @@ def recoger_estudiante(
     if not parada:
         raise HTTPException(status_code=404, detail="Parada no encontrada para este estudiante en la ruta activa")
 
+    if parada.recogido:
+        raise HTTPException(status_code=400, detail="Este estudiante ya fue recogido")
+
+    # Marcar como recogido
+    parada.recogido = True
+
     estudiante = parada.estudiante
-
-    if ruta_fija.tipo == "vuelta":
-        #Verificar si ya todos están recogidos
-        paradas_totales = db.query(models.Parada).filter_by(id_ruta=ruta_activa.id_ruta).all()
-        ya_recogidos = all(p.recogido for p in paradas_totales)
-        if ya_recogidos:
-            raise HTTPException(status_code=400, detail="Todos los estudiantes ya fueron recogidos en esta ruta")
-
-        #Recoger a todos (si aún no lo estaban)
-        for p in paradas_totales:
-            if not p.recogido:
-                p.recogido = True
-                if p.estudiante and p.estudiante.apoderado:
-                    token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=p.estudiante.apoderado.id_usuario).first()
-                    if token_entry and token_entry.token:
-                        notificaciones.enviar_notificacion(
-                            token=token_entry.token,
-                            titulo="Estudiante recogido",
-                            cuerpo=f"Tu hijo/a {p.estudiante.nombre} ha sido recogido en el colegio por el conductor {usuario_actual.nombre}."
-                        )
-        parada_recogida = parada  # Se usa para retornar
-    else:
-        # Ruta de ida → recoger uno por uno
-        if parada.recogido:
-            raise HTTPException(status_code=400, detail="Este estudiante ya fue recogido")
-
-        parada.recogido = True
-        if estudiante and estudiante.apoderado:
-            token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=estudiante.apoderado.id_usuario).first()
-            if token_entry and token_entry.token:
-                notificaciones.enviar_notificacion(
-                    token=token_entry.token,
-                    titulo="Estudiante recogido",
-                    cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor {usuario_actual.nombre}."
-                )
-        parada_recogida = parada
+    if estudiante and estudiante.apoderado:
+        token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=estudiante.apoderado.id_usuario).first()
+        if token_entry and token_entry.token:
+            notificaciones.enviar_notificacion(
+                token=token_entry.token,
+                titulo="Estudiante recogido",
+                cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido recogido por el conductor {usuario_actual.nombre}."
+            )
 
     db.commit()
-    db.refresh(parada_recogida)
+    db.refresh(parada)
 
     return schemas.ParadaResponse(
-        id_parada=parada_recogida.id_parada,
-        orden=parada_recogida.orden,
-        latitud=parada_recogida.latitud,
-        longitud=parada_recogida.longitud,
-        recogido=parada_recogida.recogido,
-        entregado=parada_recogida.entregado,
+        id_parada=parada.id_parada,
+        orden=parada.orden,
+        latitud=parada.latitud,
+        longitud=parada.longitud,
+        recogido=parada.recogido,
+        entregado=parada.entregado,
         estudiante=schemas.EstudianteResponse(
             id_estudiante=estudiante.id_estudiante,
             nombre=estudiante.nombre,
@@ -610,6 +584,7 @@ def obtener_parada_por_id(
 
 
 @router.put("/entregarEstudiante/{id_estudiante}", response_model=schemas.ParadaResponse)
+@router.put("/entregarEstudiante/{id_estudiante}", response_model=schemas.ParadaResponse)
 def entregar_estudiante(
     id_estudiante: int,
     db: Session = Depends(get_db),
@@ -626,10 +601,6 @@ def entregar_estudiante(
     if not ruta_activa:
         raise HTTPException(status_code=404, detail="No tienes una ruta activa")
 
-    ruta_fija = db.query(models.RutaFija).filter_by(id_ruta_fija=ruta_activa.id_ruta).first()
-    if not ruta_fija:
-        raise HTTPException(status_code=404, detail="Ruta fija no encontrada")
-
     parada = db.query(models.Parada).filter_by(
         id_ruta=ruta_activa.id_ruta,
         id_estudiante=id_estudiante
@@ -638,52 +609,29 @@ def entregar_estudiante(
     if not parada:
         raise HTTPException(status_code=404, detail="Parada no encontrada para este estudiante en la ruta activa")
 
+    if parada.entregado:
+        raise HTTPException(status_code=400, detail="Este estudiante ya fue entregado")
+
+    # Marcar como entregado
+    parada.entregado = True
+
+    # Enviar notificación al apoderado
     estudiante = parada.estudiante
+    if estudiante and estudiante.apoderado:
+        token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=estudiante.apoderado.id_usuario).first()
+        if token_entry and token_entry.token:
+            notificaciones.enviar_notificacion(
+                token=token_entry.token,
+                titulo="Estudiante entregado",
+                cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido entregado por el conductor {usuario_actual.nombre}."
+            )
 
-    if ruta_fija.tipo == "ida":
-        # Ruta ida: entrega individual
-        if parada.entregado:
-            raise HTTPException(status_code=400, detail="Este estudiante ya fue entregado")
-
-        parada.entregado = True
-
-        # Notificación
-        if estudiante and estudiante.apoderado:
-            token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=estudiante.apoderado.id_usuario).first()
-            if token_entry and token_entry.token:
-                notificaciones.enviar_notificacion(
-                    token=token_entry.token,
-                    titulo="Estudiante entregado",
-                    cuerpo=f"Tu hijo/a {estudiante.nombre} ha sido entregado por el conductor {usuario_actual.nombre}."
-                )
-
-    else:
-        # Ruta vuelta: entrega masiva (colegio → casa)
-        paradas_totales = db.query(models.Parada).filter_by(id_ruta=ruta_activa.id_ruta).all()
-        ya_entregados = all(p.entregado for p in paradas_totales)
-        if ya_entregados:
-            raise HTTPException(status_code=400, detail="Todos los estudiantes ya fueron entregados")
-
-        for p in paradas_totales:
-            if not p.entregado:
-                p.entregado = True
-                est = p.estudiante
-                if est and est.apoderado:
-                    token_entry = db.query(models.TokenFirebase).filter_by(id_usuario=est.apoderado.id_usuario).first()
-                    if token_entry and token_entry.token:
-                        notificaciones.enviar_notificacion(
-                            token=token_entry.token,
-                            titulo="Estudiante entregado",
-                            cuerpo=f"Tu hijo/a {est.nombre} ha sido entregado en su casa por el conductor {usuario_actual.nombre}."
-                        )
-
-    # Finalizar si es la última parada
+    # Finalizar ruta si es la última parada
     if parada.es_destino_final:
         ruta_activa.estado = "finalizada"
         ruta_activa.hora_termino = datetime.now().time()
         db.commit()
         db.refresh(ruta_activa)
-
         try:
             notificaciones.enviar_finalizacion_ruta(ruta_activa.id_conductor)
         except Exception as e:
@@ -715,6 +663,7 @@ def entregar_estudiante(
             id_usuario_conductor=estudiante.conductor.id_usuario if estudiante.conductor else None
         )
     )
+
 
 
 @router.put("/ubicacion")
