@@ -57,7 +57,6 @@ def obtener_mi_perfil_completo(
         )
     )
 
-
 @router.post("/asistencia", response_model=schemas.AsistenciaResponse)
 def registrar_asistencia(
     asistencia: schemas.AsistenciaCreate,
@@ -109,7 +108,6 @@ def registrar_asistencia(
         db.commit()
         db.refresh(nuevo)
         return nuevo
-
 
 @router.get("/hijos", response_model=List[schemas.EstudianteConAsistenciaHoy])
 def listar_hijos_con_asistencia(
@@ -196,9 +194,6 @@ def listar_hijos_con_asistencia(
         ))
 
     return resultado
-
-
-
 
 @router.get("/ubicacionConductor/{id_usuario}", response_model=schemas.UbicacionConductorResponse)
 def obtener_ubicacion_conductor(

@@ -468,7 +468,6 @@ def recoger_estudiante(
         )
     )
 
-
 @router.put("/RecalcularRutaActiva", response_model=schemas.RutaConParadasResponse)
 def recalcular_ruta_dia(
     db: Session = Depends(get_db),
@@ -582,8 +581,6 @@ def obtener_parada_por_id(
         )
     )
 
-
-@router.put("/entregarEstudiante/{id_estudiante}", response_model=schemas.ParadaResponse)
 @router.put("/entregarEstudiante/{id_estudiante}", response_model=schemas.ParadaResponse)
 def entregar_estudiante(
     id_estudiante: int,
@@ -664,8 +661,6 @@ def entregar_estudiante(
         )
     )
 
-
-
 @router.put("/ubicacion")
 def actualizar_ubicacion_conductor(
     latitud: float = Query(..., description="Latitud actual del conductor"),
@@ -706,9 +701,3 @@ def actualizar_ubicacion_conductor(
     db.commit()
 
     return {"mensaje": "Ubicación actualizada en base de datos y Firebase"}
-
-
-
-#mejorar la restriccion para que no deje a todos los estudiantes recogidos en una ruta de ida
-#o entregados en una ruta de vuelta
-#
