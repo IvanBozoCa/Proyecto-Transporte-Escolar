@@ -261,3 +261,60 @@ def obtener_conductor_asignado(
     ) if conductor.acompanante else None
 )
 
+@router.get("/verruta", response_model=schemas.RutaConParadasResponse)
+def obtener_ruta_activa_apoderado(
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "apoderado":
+        raise HTTPException(status_code=403, detail="Solo los apoderados pueden acceder a esta ruta")
+
+    apoderado = db.query(models.Apoderado).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not apoderado:
+        raise HTTPException(status_code=404, detail="Apoderado no encontrado")
+
+    estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
+    if not estudiantes:
+        raise HTTPException(status_code=404, detail="No se encontraron estudiantes asociados")
+
+    hoy = date.today()
+
+    # Buscar la primera ruta activa en la que esté algún estudiante del apoderado
+    ruta = (
+        db.query(models.Ruta)
+        .join(models.Parada)
+        .filter(
+            models.Ruta.fecha == hoy,
+            models.Ruta.estado == "activa",
+            models.Parada.id_estudiante.in_([e.id_estudiante for e in estudiantes])
+        )
+        .first()
+    )
+
+    if not ruta:
+        raise HTTPException(status_code=404, detail="No se encontró una ruta activa para los estudiantes")
+
+    paradas_ordenadas = sorted(ruta.paradas, key=lambda p: p.orden)
+    parada_responses = []
+    for parada in paradas_ordenadas:
+        estudiante = parada.estudiante
+        parada_responses.append(
+            schemas.ParadaResponse(
+                id_parada=parada.id_parada,
+                orden=parada.orden,
+                latitud=parada.latitud,
+                longitud=parada.longitud,
+                recogido=parada.recogido,
+                entregado=parada.entregado,
+                estudiante=schemas.EstudianteSimple.from_orm(estudiante) if estudiante else None
+            )
+        )
+
+    return schemas.RutaConParadasResponse(
+        id_ruta=ruta.id_ruta,
+        fecha=ruta.fecha,
+        estado=ruta.estado,
+        hora_inicio=ruta.hora_inicio,
+        id_acompanante=ruta.id_acompanante,
+        paradas=parada_responses
+    )

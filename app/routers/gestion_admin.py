@@ -771,10 +771,11 @@ def obtener_todos_los_estudiantes(
     db: Session = Depends(get_db),
     _: models.Usuario = Depends(verificar_admin)
 ):
-    estudiantes = db.query(models.Estudiante).filter_by(activo=True).all()
+    estudiantes = db.query(models.Estudiante).all()
 
     resultado = []
     for estudiante in estudiantes:
+
         resultado.append(
             schemas.EstudianteResponse(
                 id_estudiante=estudiante.id_estudiante,
@@ -789,7 +790,8 @@ def obtener_todos_los_estudiantes(
                 long_colegio=estudiante.long_colegio,
                 nombre_apoderado_secundario=estudiante.nombre_apoderado_secundario,
                 telefono_apoderado_secundario=estudiante.telefono_apoderado_secundario,
-                id_usuario_conductor=estudiante.conductor.id_usuario if estudiante.conductor else None
+                id_usuario_conductor=estudiante.id_conductor
             )
         )
+
     return resultado

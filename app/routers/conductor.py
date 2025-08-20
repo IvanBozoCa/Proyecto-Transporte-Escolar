@@ -46,7 +46,6 @@ def obtener_mi_info_conductor(
         datos_conductor=datos_conductor_schema
     )
     
-    
 @router.get("/estudiantes", response_model=List[schemas.EstudianteResponse])
 def obtener_estudiantes_conductor(
     usuario_actual: models.Usuario = Depends(get_current_user),
@@ -82,7 +81,6 @@ def obtener_estudiantes_conductor(
     ]
 
     return estudiantes_response
-
 
 @router.get("/asistenciaEstudiantes", response_model=List[schemas.EstudianteConAsistenciaHoy])
 def listar_estudiantes_con_asistencia_hoy(
@@ -701,3 +699,49 @@ def actualizar_ubicacion_conductor(
     db.commit()
 
     return {"mensaje": "Ubicación actualizada en base de datos y Firebase"}
+
+@router.get("/verruta", response_model=schemas.RutaConParadasResponse)
+def obtener_ruta_activa_conductor(
+    db: Session = Depends(get_db),
+    usuario_actual: models.Usuario = Depends(get_current_user)
+):
+    if usuario_actual.tipo_usuario != "conductor":
+        raise HTTPException(status_code=403, detail="Solo los conductores pueden acceder a esta ruta")
+
+    conductor = db.query(models.Conductor).filter_by(id_usuario=usuario_actual.id_usuario).first()
+    if not conductor:
+        raise HTTPException(status_code=404, detail="Conductor no encontrado")
+
+    hoy = date.today()
+    ruta = (
+        db.query(models.Ruta)
+        .filter_by(id_conductor=conductor.id_conductor, fecha=hoy, estado="activa")
+        .first()
+    )
+    if not ruta:
+        raise HTTPException(status_code=404, detail="No hay ruta activa para hoy")
+
+    paradas_ordenadas = sorted(ruta.paradas, key=lambda p: p.orden)
+    parada_responses = []
+    for parada in paradas_ordenadas:
+        estudiante = parada.estudiante
+        parada_responses.append(
+            schemas.ParadaResponse(
+                id_parada=parada.id_parada,
+                orden=parada.orden,
+                latitud=parada.latitud,
+                longitud=parada.longitud,
+                recogido=parada.recogido,
+                entregado=parada.entregado,
+                estudiante=schemas.EstudianteSimple.from_orm(estudiante) if estudiante else None
+            )
+        )
+
+    return schemas.RutaConParadasResponse(
+        id_ruta=ruta.id_ruta,
+        fecha=ruta.fecha,
+        estado=ruta.estado,
+        hora_inicio=ruta.hora_inicio,
+        id_acompanante=ruta.id_acompanante,
+        paradas=parada_responses
+    )

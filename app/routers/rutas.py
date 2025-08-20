@@ -262,7 +262,6 @@ def obtener_ruta_fija_por_id(
         parada_final=parada_final
     )
 
-
 @router.put("/RutaFija/{id_ruta_fija}", response_model=schemas.RutaFijaResponse)
 def editar_ruta_fija(
     id_ruta_fija: int,
@@ -399,8 +398,6 @@ def editar_ruta_fija(
         paradas=paradas_estudiantes,
         parada_final=parada_final
     )
-
-
 
 @router.delete("/RutaFija/{id_ruta_fija}", status_code=204)
 def eliminar_ruta_fija(

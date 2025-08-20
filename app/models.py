@@ -60,7 +60,7 @@ class Apoderado(Base):
     id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario",ondelete="CASCADE"), unique=True, nullable=False)
     
     usuario = relationship("Usuario", back_populates="apoderado")
-    estudiantes = relationship("Estudiante", back_populates="apoderado")
+    estudiantes = relationship("Estudiante", back_populates="apoderado", passive_deletes=True)
 
 
 
@@ -82,15 +82,15 @@ class Estudiante(Base):
     nombre_apoderado_secundario = Column(String, nullable=True)
     telefono_apoderado_secundario = Column(String, nullable=True)
 
-    id_apoderado = Column(Integer, ForeignKey("apoderados.id_apoderado"))
+    id_apoderado = Column(Integer, ForeignKey("apoderados.id_apoderado", ondelete="CASCADE"))
     id_conductor = Column(Integer, ForeignKey("conductores.id_conductor"), nullable=True)
 
     conductor = relationship("Conductor", back_populates="estudiantes")
-    apoderado = relationship("Apoderado", back_populates="estudiantes")
-    paradas = relationship("Parada", back_populates="estudiante")
-    asistencias = relationship("Asistencia", back_populates="estudiante")
-    rutas_estudiantes = relationship("RutaEstudiante", back_populates="estudiante")
-    paradas_fijas = relationship("ParadaRutaFija", back_populates="estudiante", cascade="all, delete-orphan")
+    apoderado = relationship("Apoderado", back_populates="estudiantes", passive_deletes=True)
+    paradas = relationship("Parada", back_populates="estudiante", passive_deletes=True)
+    asistencias = relationship("Asistencia", back_populates="estudiante", passive_deletes=True)
+    rutas_estudiantes = relationship("RutaEstudiante", back_populates="estudiante", passive_deletes=True)
+    paradas_fijas = relationship("ParadaRutaFija", back_populates="estudiante", passive_deletes=True)
 
 # ================= ACOMPAÑANTE =================
 class Acompanante(Base):
@@ -135,7 +135,7 @@ class RutaEstudiante(Base):
 class Parada(Base):
     __tablename__ = "paradas"
     id_parada = Column(Integer, primary_key=True)
-    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"))
+    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante", ondelete = "CASCADE"))
     id_ruta = Column(Integer, ForeignKey("rutas.id_ruta"))
     orden = Column(Integer, nullable=False)
     latitud = Column(DECIMAL(9, 6))
@@ -143,7 +143,7 @@ class Parada(Base):
     recogido = Column(Boolean, default=False)
     entregado = Column(Boolean, default=False)
     es_destino_final = Column(Boolean, default=False)
-    estudiante = relationship("Estudiante", back_populates="paradas")
+    estudiante = relationship("Estudiante", back_populates="paradas", passive_deletes=True)
     ruta = relationship("Ruta", back_populates="paradas")
 
     __table_args__ = (
@@ -156,11 +156,11 @@ class Asistencia(Base):
     __tablename__ = "asistencias"
 
     id_asistencia = Column(Integer, primary_key=True, index=True)
-    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"))
+    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante", ondelete="CASCADE"))
+    estudiante = relationship("Estudiante", back_populates="asistencias", passive_deletes=True)
     fecha = Column(Date, nullable=False)
     asiste = Column(Boolean, nullable=False)
 
-    estudiante = relationship("Estudiante", back_populates="asistencias")
 
 
 # ================= NOTIFICACIÓN =================
@@ -189,8 +189,8 @@ class RutaFija(Base):
 class ParadaRutaFija(Base):
     __tablename__ = "paradas_ruta_fija"
     id_parada_ruta_fija = Column(Integer, primary_key=True)
-    id_ruta_fija = Column(Integer, ForeignKey("rutas_fijas.id_ruta_fija"))
-    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"))
+    id_ruta_fija = Column(Integer, ForeignKey("rutas_fijas.id_ruta_fija", ondelete="CASCADE"))
+    id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante", ondelete="CASCADE"))
     orden = Column(Integer)
     es_destino_final = Column(Boolean, default=False)
     ruta = relationship("RutaFija", back_populates="paradas")

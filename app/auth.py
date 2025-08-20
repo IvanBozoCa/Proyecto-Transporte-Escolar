@@ -96,7 +96,7 @@ def verificar_tipo_usuario(usuario: Usuario = Depends(get_current_user)):
 
 
 def validar_contrasena(password: str):
-    if len(password) < 8:
+    if len(password) < 10:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
     if not any(c.isupper() for c in password):
         raise HTTPException(status_code=400, detail="Debe tener al menos una letra mayúscula.")
@@ -108,7 +108,7 @@ def validar_contrasena(password: str):
         raise HTTPException(status_code=400, detail="Debe tener al menos un símbolo especial.")
 
 
-def validar_patente_chilena(patente: str):
+def validar_patente_chilena(patente: str): 
     patente = patente.strip().upper()
     
     formato_nuevo = re.match(r'^[A-Z]{2}[0-9]{2}[A-Z]{2}$', patente)
