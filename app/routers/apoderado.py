@@ -272,6 +272,8 @@ def obtener_ruta_activa_apoderado(
     estudiantes = db.query(models.Estudiante).filter_by(id_apoderado=apoderado.id_apoderado).all()
     if not estudiantes:
         raise HTTPException(status_code=404, detail="No se encontraron estudiantes asociados")
+    ids_hijos = {est.id_estudiante for est in estudiantes}
+    
 
     hoy = date.today()
 
@@ -281,8 +283,7 @@ def obtener_ruta_activa_apoderado(
         .join(models.Parada)
         .filter(
             models.Ruta.fecha == hoy,
-            models.Ruta.estado == "activa",
-            models.Parada.id_estudiante.in_([e.id_estudiante for e in estudiantes])
+            models.Ruta.estado == "activa"
         )
         .first()
     )
@@ -293,7 +294,10 @@ def obtener_ruta_activa_apoderado(
     paradas_ordenadas = sorted(ruta.paradas, key=lambda p: p.orden)
     parada_responses = []
     for parada in paradas_ordenadas:
+        if parada.id_estudiante not in ids_hijos:
+            continue 
         estudiante = parada.estudiante
+
         parada_responses.append(
             schemas.ParadaResponse(
                 id_parada=parada.id_parada,
@@ -302,6 +306,7 @@ def obtener_ruta_activa_apoderado(
                 longitud=parada.longitud,
                 recogido=parada.recogido,
                 entregado=parada.entregado,
+                es_hijo=True,
                 estudiante=schemas.EstudianteSimple.from_orm(estudiante) if estudiante else None
             )
         )
@@ -312,5 +317,6 @@ def obtener_ruta_activa_apoderado(
         estado=ruta.estado,
         hora_inicio=ruta.hora_inicio,
         id_acompanante=ruta.id_acompanante,
+        tipo=ruta.tipo,
         paradas=parada_responses
     )

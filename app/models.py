@@ -112,7 +112,7 @@ class Ruta(Base):
     fecha = Column(Date, nullable=False)
     hora_inicio = Column(Time)
     estado = Column(String, default="activa")
-
+    tipo = Column(String, default="ida") 
     conductor = relationship("Conductor", back_populates="rutas")
     acompanante = relationship("Acompanante", back_populates="rutas")
     paradas = relationship("Parada", back_populates="ruta")
@@ -125,7 +125,7 @@ class RutaEstudiante(Base):
     id_ruta = Column(Integer, ForeignKey("rutas.id_ruta"), nullable=False)
     id_estudiante = Column(Integer, ForeignKey("estudiantes.id_estudiante"), nullable=False)
     orden = Column(Integer, nullable=True)  # Orden opcional de recogida
-
+    
     ruta = relationship("Ruta", back_populates="paradas_estudiantes")
     estudiante = relationship("Estudiante", back_populates="rutas_estudiantes")
     

@@ -275,7 +275,8 @@ def generar_ruta_dia(
         id_conductor=conductor.id_conductor,
         fecha=hoy,
         hora_inicio=datetime.now().time(),
-        estado="activa"
+        estado="activa",
+        tipo=ruta_fija.tipo
     )
     db.add(nueva_ruta)
     db.commit()
@@ -314,12 +315,13 @@ def generar_ruta_dia(
                 token_obj = estudiante.apoderado.usuario.token_firebase
                 if token_obj and token_obj.token:
                     notificaciones.enviar_notificacion_inicio_ruta(
-                        nombre_estudiante=estudiante.nombre,
                         nombre_conductor=nombre_conductor,
                         token=token_obj.token
                     )
                     tokens_apoderados.add(token_obj.token)
 
+    for token in tokens_apoderados:
+        notificaciones.enviar_notificacion_inicio_ruta(nombre_conductor, token)
 
     db.commit()
     db.refresh(nueva_ruta)
@@ -336,6 +338,7 @@ def generar_ruta_dia(
                 longitud=parada.longitud,
                 recogido=parada.recogido,
                 entregado=parada.entregado,
+                es_hijo=False,
                 estudiante=schemas.EstudianteSimple(
                     id_estudiante=estudiante.id_estudiante,
                     nombre=estudiante.nombre,
@@ -364,8 +367,6 @@ def generar_ruta_dia(
         id_acompanante=nueva_ruta.id_acompanante,
         paradas=parada_responses
     )
-
-
 
 @router.put("/FinalizarRuta")
 def finalizar_ruta(
@@ -726,6 +727,7 @@ def obtener_ruta_activa_conductor(
                 longitud=parada.longitud,
                 recogido=parada.recogido,
                 entregado=parada.entregado,
+                es_hijo=False,
                 estudiante=schemas.EstudianteSimple.from_orm(estudiante) if estudiante else None
             )
         )
@@ -736,5 +738,6 @@ def obtener_ruta_activa_conductor(
         estado=ruta.estado,
         hora_inicio=ruta.hora_inicio,
         id_acompanante=ruta.id_acompanante,
+        tipo=ruta.tipo,
         paradas=parada_responses
     )

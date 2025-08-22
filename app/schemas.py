@@ -365,6 +365,7 @@ class ParadaResponse(BaseModel):
     longitud: float
     recogido: bool
     entregado: bool
+    es_hijo:bool
     estudiante: Optional[EstudianteSimple] = None
 
     class Config:
@@ -378,6 +379,7 @@ class RutaConParadasResponse(BaseModel):
     hora_inicio: Optional[time]
     id_acompanante: Optional[int] = None
     paradas: List[ParadaResponse]
+    
 
     class Config:
         from_attributes = True
