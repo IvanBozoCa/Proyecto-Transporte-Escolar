@@ -314,7 +314,6 @@ def generar_ruta_dia(
                 token_obj = estudiante.apoderado.usuario.token_firebase
                 if token_obj and token_obj.token:
                     notificaciones.enviar_notificacion_inicio_ruta(
-                        nombre_estudiante=estudiante.nombre,
                         nombre_conductor=nombre_conductor,
                         token=token_obj.token
                     )
