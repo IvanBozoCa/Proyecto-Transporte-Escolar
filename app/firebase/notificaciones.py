@@ -51,22 +51,6 @@ def eliminar_ubicacion_conductor(id_conductor: int):
     ref = db.reference(f"ubicaciones/conductor_{id_conductor}")
     ref.delete()
     
-def enviar_notificacion_inicio_ruta(titulo: str, cuerpo: str, tokens: list[str]):
-    message = messaging.MulticastMessage(
-        notification=messaging.Notification(
-            title=titulo,
-            body=cuerpo,
-        ),
-        tokens=tokens
-    )
-    response = messaging.send_multicast(message)
-    print(f"Notificación grupal enviada. Éxito: {response.success_count}, Fallos: {response.failure_count}")
-    
-    for idx, resp in enumerate(response.responses):
-        if not resp.success:
-            print(f"Error en token {tokens[idx]}: {resp.exception}")
-    
-    return response
 
 def marcar_ruta_activa(id_conductor: int):
     ref = db.reference(f"rutas_activas/conductor_{id_conductor}")
