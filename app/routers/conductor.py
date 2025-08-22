@@ -263,12 +263,11 @@ def generar_ruta_dia(
         raise HTTPException(status_code=404, detail="Ruta fija no encontrada para este conductor")
 
     hoy = date.today()
-
-    ruta_activa = (
-        db.query(models.Ruta)
-        .filter_by(id_conductor=conductor.id_conductor, fecha=hoy, estado="activa")
-        .first()
-    )
+    ruta_activa = db.query(models.Ruta).filter_by(
+        id_conductor=conductor.id_conductor,
+        fecha=hoy,
+        estado="activa"
+    ).first()
     if ruta_activa:
         raise HTTPException(status_code=400, detail="Ya existe una ruta activa para hoy")
 
@@ -282,14 +281,12 @@ def generar_ruta_dia(
     db.commit()
     db.refresh(nueva_ruta)
 
-    paradas_fijas = (
-        db.query(models.ParadaRutaFija)
-        .filter_by(id_ruta_fija=id_ruta_fija)
-        .order_by(models.ParadaRutaFija.orden)
-        .all()
-    )
+    paradas_fijas = db.query(models.ParadaRutaFija).filter_by(
+        id_ruta_fija=id_ruta_fija
+    ).order_by(models.ParadaRutaFija.orden).all()
 
     nombre_conductor = usuario_actual.nombre
+    tokens_apoderados = set()
 
     for parada_fija in paradas_fijas:
         if parada_fija.id_estudiante and not parada_fija.es_destino_final:
@@ -311,7 +308,6 @@ def generar_ruta_dia(
         )
         db.add(parada)
 
-        # Notificar al apoderado si no es la parada final
         if not parada_fija.es_destino_final and parada_fija.id_estudiante:
             estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada_fija.id_estudiante).first()
             if estudiante and estudiante.apoderado and estudiante.apoderado.usuario:
@@ -322,6 +318,10 @@ def generar_ruta_dia(
                         nombre_conductor=nombre_conductor,
                         token=token_obj.token
                     )
+                    tokens_apoderados.add(token_obj.token)
+
+    for token in tokens_apoderados:
+        notificaciones.enviar_notificacion_inicio_ruta(nombre_conductor, token)
 
     db.commit()
     db.refresh(nueva_ruta)
@@ -366,6 +366,7 @@ def generar_ruta_dia(
         id_acompanante=nueva_ruta.id_acompanante,
         paradas=parada_responses
     )
+
 
 
 @router.put("/FinalizarRuta")
