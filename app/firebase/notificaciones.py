@@ -103,7 +103,7 @@ def enviar_notificacion_asistencia_conductor(nombre_estudiante: str, asiste: boo
     )
 
 
-def enviar_notificacion_inicio_ruta(nombre_estudiante: str, nombre_conductor: str, token: str):
+def enviar_notificacion_inicio_ruta(nombre_conductor: str, token: str):
     titulo = "Inicio de ruta"
     cuerpo = f"El conductor {nombre_conductor} ha iniciado la ruta."
     enviar_notificacion(
