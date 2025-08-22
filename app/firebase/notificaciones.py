@@ -87,3 +87,27 @@ def enviar_notificacion_recogida_estudiante(nombre_estudiante: str, token: str, 
         cuerpo=cuerpo,
         token=token
     )
+
+def enviar_notificacion_asistencia_conductor(nombre_estudiante: str, asiste: bool, token: str):
+    if asiste:
+        titulo = "Estudiante reincorporado"
+        cuerpo = f"El estudiante {nombre_estudiante} vuelve a la ruta."
+    else:
+        titulo = "Estudiante ausente"
+        cuerpo = f"El estudiante {nombre_estudiante} no asistirá. Ha sido retirado de la ruta."
+
+    enviar_notificacion(
+        titulo=titulo,
+        cuerpo=cuerpo,
+        token=token
+    )
+
+
+def enviar_notificacion_inicio_ruta(nombre_estudiante: str, nombre_conductor: str, token: str):
+    titulo = "Inicio de ruta"
+    cuerpo = f"El conductor {nombre_conductor} ha iniciado la ruta."
+    enviar_notificacion(
+        titulo=titulo,
+        cuerpo=cuerpo,
+        token=token
+    )

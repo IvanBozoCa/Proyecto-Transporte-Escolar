@@ -289,17 +289,16 @@ def generar_ruta_dia(
         .all()
     )
 
-    tokens = set()
+    nombre_conductor = usuario_actual.nombre
 
     for parada_fija in paradas_fijas:
-        # Lógica de asistencia actualizada: solo se excluye si hay registro con asiste=False
         if parada_fija.id_estudiante and not parada_fija.es_destino_final:
             asistencia = db.query(models.Asistencia).filter_by(
                 id_estudiante=parada_fija.id_estudiante
             ).order_by(models.Asistencia.fecha.desc()).first()
 
             if asistencia and asistencia.asiste is False:
-                continue  # Se excluye si tiene asistencia explícitamente negativa
+                continue
 
         parada = models.Parada(
             id_ruta=nueva_ruta.id_ruta,
@@ -312,24 +311,17 @@ def generar_ruta_dia(
         )
         db.add(parada)
 
+        # Notificar al apoderado si no es la parada final
         if not parada_fija.es_destino_final and parada_fija.id_estudiante:
             estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada_fija.id_estudiante).first()
             if estudiante and estudiante.apoderado and estudiante.apoderado.usuario:
-                token = estudiante.apoderado.usuario.token_firebase
-                if isinstance(token, str) and token.strip():
-                    tokens.add(token.strip())
-
-    if tokens:
-        try:
-            print(f"[INFO] Enviando notificación de inicio a {len(tokens)} apoderados.")
-            notificaciones.enviar_notificacion_inicio_ruta(
-                titulo="Ruta iniciada",
-                cuerpo="La ruta escolar del día ha comenzado.",
-                tokens=list(tokens)
-            )
-            notificaciones.enviar_inicio_ruta(conductor.id_conductor)
-        except Exception as e:
-            print(f"Error al enviar notificación grupal: {e}")
+                token_obj = estudiante.apoderado.usuario.token_firebase
+                if token_obj and token_obj.token:
+                    notificaciones.enviar_notificacion_inicio_ruta(
+                        nombre_estudiante=estudiante.nombre,
+                        nombre_conductor=nombre_conductor,
+                        token=token_obj.token
+                    )
 
     db.commit()
     db.refresh(nueva_ruta)
@@ -365,6 +357,7 @@ def generar_ruta_dia(
         )
 
     notificaciones.marcar_ruta_activa(conductor.id_conductor)
+
     return schemas.RutaConParadasResponse(
         id_ruta=nueva_ruta.id_ruta,
         fecha=nueva_ruta.fecha,
@@ -373,6 +366,7 @@ def generar_ruta_dia(
         id_acompanante=nueva_ruta.id_acompanante,
         paradas=parada_responses
     )
+
 
 @router.put("/FinalizarRuta")
 def finalizar_ruta(

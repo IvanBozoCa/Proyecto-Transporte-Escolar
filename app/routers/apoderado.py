@@ -8,6 +8,7 @@ from typing import List
 from datetime import date
 from fastapi.responses import JSONResponse
 from typing import Union
+from app.firebase import notificaciones
 
 router = APIRouter(
     prefix="/apoderado",
@@ -57,7 +58,9 @@ def obtener_mi_perfil_completo(
         )
     )
 
-@router.post("/asistencia", response_model=schemas.AsistenciaResponse)
+from datetime import date
+
+@router.post("/registrarAsistencia", response_model=schemas.AsistenciaResponse)
 def registrar_asistencia(
     asistencia: schemas.AsistenciaCreate,
     db: Session = Depends(get_db),
@@ -77,37 +80,30 @@ def registrar_asistencia(
         fecha=hoy
     ).first()
 
-    if asistencia.asiste:
-        if registro_existente:
-            registro_existente.asiste = True
-            db.commit()
-            db.refresh(registro_existente)
-            return registro_existente
-        else:
-            nuevo = models.Asistencia(
-                id_estudiante=asistencia.id_estudiante,
-                fecha=hoy,
-                asiste=True
-            )
-            db.add(nuevo)
-            db.commit()
-            db.refresh(nuevo)
-            return nuevo
+    if registro_existente:
+        registro_existente.asiste = asistencia.asiste
+        db.commit()
+        db.refresh(registro_existente)
+        asistencia_registrada = registro_existente
     else:
-        if registro_existente:
-            registro_existente.asiste = False
-            db.commit()
-            db.refresh(registro_existente)
-            return registro_existente
         nuevo = models.Asistencia(
             id_estudiante=asistencia.id_estudiante,
             fecha=hoy,
-            asiste=False
+            asiste=asistencia.asiste
         )
         db.add(nuevo)
         db.commit()
         db.refresh(nuevo)
-        return nuevo
+        asistencia_registrada = nuevo
+
+    # 🔔 Enviar notificación al conductor si tiene token
+    conductor = db.query(models.Conductor).filter_by(id_conductor=estudiante.id_conductor).first()
+    if conductor and conductor.usuario and conductor.usuario.token_firebase:
+        token_conductor = conductor.usuario.token_firebase.token
+        notificaciones.enviar_notificacion_asistencia_conductor(estudiante.nombre, asistencia.asiste, token_conductor)
+
+    return asistencia_registrada
+
 
 @router.get("/hijos", response_model=List[schemas.EstudianteConAsistenciaHoy])
 def listar_hijos_con_asistencia(
