@@ -314,13 +314,12 @@ def generar_ruta_dia(
                 token_obj = estudiante.apoderado.usuario.token_firebase
                 if token_obj and token_obj.token:
                     notificaciones.enviar_notificacion_inicio_ruta(
+                        nombre_estudiante=estudiante.nombre,
                         nombre_conductor=nombre_conductor,
                         token=token_obj.token
                     )
                     tokens_apoderados.add(token_obj.token)
 
-    for token in tokens_apoderados:
-        notificaciones.enviar_notificacion_inicio_ruta(nombre_conductor, token)
 
     db.commit()
     db.refresh(nueva_ruta)
