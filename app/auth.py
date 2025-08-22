@@ -97,7 +97,7 @@ def verificar_tipo_usuario(usuario: Usuario = Depends(get_current_user)):
 
 def validar_contrasena(password: str):
     if len(password) > 9:
-        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 8 caracteres.")
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 10 caracteres.")
     if not any(c.isupper() for c in password):
         raise HTTPException(status_code=400, detail="Debe tener al menos una letra mayúscula.")
     if not any(c.islower() for c in password):
