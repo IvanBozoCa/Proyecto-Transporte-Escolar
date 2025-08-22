@@ -60,7 +60,7 @@ def obtener_mi_perfil_completo(
 
 from datetime import date
 
-@router.post("/registrarAsistencia", response_model=schemas.AsistenciaResponse)
+@router.post("/asistencia", response_model=schemas.AsistenciaResponse)
 def registrar_asistencia(
     asistencia: schemas.AsistenciaCreate,
     db: Session = Depends(get_db),
@@ -96,7 +96,7 @@ def registrar_asistencia(
         db.refresh(nuevo)
         asistencia_registrada = nuevo
 
-    # 🔔 Enviar notificación al conductor si tiene token
+    # Enviar notificación al conductor si tiene token
     conductor = db.query(models.Conductor).filter_by(id_conductor=estudiante.id_conductor).first()
     if conductor and conductor.usuario and conductor.usuario.token_firebase:
         token_conductor = conductor.usuario.token_firebase.token

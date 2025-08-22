@@ -81,7 +81,7 @@ def eliminar_ruta_activa(id_conductor: int):
     ref.delete()
     
 def enviar_notificacion_recogida_estudiante(nombre_estudiante: str, token: str, nombre_conductor: str = ""):
-    cuerpo = f"Tu hijo/a {nombre_estudiante} ha sido recogido por el conductor {nombre_conductor}." if nombre_conductor else f"Tu hijo/a {nombre_estudiante} ha sido recogido."
+    cuerpo = f"Tu estudiante {nombre_estudiante} ha sido recogido por el conductor {nombre_conductor}." if nombre_conductor else f"Tu hijo/a {nombre_estudiante} ha sido recogido."
     enviar_notificacion(
         titulo="Estudiante recogido",
         cuerpo=cuerpo,
