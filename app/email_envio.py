@@ -4,7 +4,7 @@ from sendgrid.helpers.mail import Mail
 from fastapi import HTTPException
 
 def enviar_correo_restablecer_contrasena(destinatario: str, token: str):
-    url = f"https://frontend-app.com/restablecer?token={token}"  # Puedes cambiar esto luego
+    url = f"https://movil-app-page.vercel.app/new-pass{token}"  # Puedes cambiar esto luego
     asunto = "Restablece tu contraseña Transporte Escolar"
     contenido = f"Haz clic en este enlace para restablecer tu contraseña:\n\n{url}"
 
