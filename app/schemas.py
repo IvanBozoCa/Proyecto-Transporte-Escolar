@@ -378,6 +378,7 @@ class RutaConParadasResponse(BaseModel):
     estado: str
     hora_inicio: Optional[time]
     id_acompanante: Optional[int] = None
+    tipo:str
     paradas: List[ParadaResponse]
     
 

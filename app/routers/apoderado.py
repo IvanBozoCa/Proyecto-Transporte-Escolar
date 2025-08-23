@@ -283,7 +283,8 @@ def obtener_ruta_activa_apoderado(
         .join(models.Parada)
         .filter(
             models.Ruta.fecha == hoy,
-            models.Ruta.estado == "activa"
+            models.Ruta.estado == "activa",
+            models.Parada.id_estudiante.in_(ids_hijos)
         )
         .first()
     )
@@ -294,9 +295,8 @@ def obtener_ruta_activa_apoderado(
     paradas_ordenadas = sorted(ruta.paradas, key=lambda p: p.orden)
     parada_responses = []
     for parada in paradas_ordenadas:
-        if parada.id_estudiante not in ids_hijos:
-            continue 
         estudiante = parada.estudiante
+        es_hijo = parada.id_estudiante in ids_hijos 
 
         parada_responses.append(
             schemas.ParadaResponse(
@@ -306,7 +306,7 @@ def obtener_ruta_activa_apoderado(
                 longitud=parada.longitud,
                 recogido=parada.recogido,
                 entregado=parada.entregado,
-                es_hijo=True,
+                es_hijo=es_hijo,
                 estudiante=schemas.EstudianteSimple.from_orm(estudiante) if estudiante else None
             )
         )

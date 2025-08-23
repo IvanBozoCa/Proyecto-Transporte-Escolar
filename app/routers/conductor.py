@@ -365,6 +365,7 @@ def generar_ruta_dia(
         estado=nueva_ruta.estado,
         hora_inicio=nueva_ruta.hora_inicio,
         id_acompanante=nueva_ruta.id_acompanante,
+        tipo=nueva_ruta.tipo,
         paradas=parada_responses
     )
 
