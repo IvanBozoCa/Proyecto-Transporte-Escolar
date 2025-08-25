@@ -137,18 +137,21 @@ def listar_hijos_con_asistencia(
                 asiste=True
             )
 
-        # Obtener ruta fija asociada (opcional, solo referencia)
-        ruta_fija = (
-            db.query(models.RutaFija)
-            .join(models.Conductor)
-            .filter(models.Conductor.id_conductor == est.id_conductor)
+        # Obtener ruta fija asociada a través de la parada del estudiante
+        parada_fija = (
+            db.query(models.ParadaRutaFija)
+            .join(models.RutaFija)
+            .filter(
+                models.ParadaRutaFija.id_estudiante == est.id_estudiante,
+                models.RutaFija.id_conductor == est.id_conductor
+            )
             .first()
         )
 
         ruta_schema = schemas.RutaResumen(
-            id=ruta_fija.id_ruta_fija,
-            nombre=ruta_fija.nombre
-        ) if ruta_fija else None
+            id=parada_fija.id_ruta_fija,
+            nombre=parada_fija.ruta.nombre
+        ) if parada_fija else None
 
         # Buscar parada activa del estudiante en la ruta del día
         parada_hoy = (
@@ -190,6 +193,7 @@ def listar_hijos_con_asistencia(
         ))
 
     return resultado
+
 
 @router.get("/ubicacionConductor/{id_usuario}", response_model=schemas.UbicacionConductorResponse)
 def obtener_ubicacion_conductor(
