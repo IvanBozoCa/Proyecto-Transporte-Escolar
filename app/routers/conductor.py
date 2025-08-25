@@ -94,19 +94,35 @@ def listar_estudiantes_con_asistencia_hoy(
     if not conductor:
         raise HTTPException(status_code=404, detail="Conductor no encontrado.")
 
-    ruta_fija = db.query(models.RutaFija).filter_by(id_conductor=conductor.id_conductor).first()
-    ruta_resumen = schemas.RutaResumen(
-        id=ruta_fija.id_ruta_fija,
-        nombre=ruta_fija.nombre
-    ) if ruta_fija else None
-
     estudiantes = conductor.estudiantes
     resultado = []
 
     for est in estudiantes:
-        asistencia = db.query(models.Asistencia).filter_by(
-            id_estudiante=est.id_estudiante
-        ).order_by(models.Asistencia.fecha.desc()).first()
+        # Buscar si el estudiante tiene una parada en alguna ruta fija del conductor
+        parada_fija = (
+            db.query(models.ParadaRutaFija)
+            .join(models.RutaFija, models.ParadaRutaFija.id_ruta_fija == models.RutaFija.id_ruta_fija)
+            .filter(
+                models.RutaFija.id_conductor == conductor.id_conductor,
+                models.ParadaRutaFija.id_estudiante == est.id_estudiante
+            )
+            .first()
+        )
+
+        if parada_fija and parada_fija.ruta:
+            ruta_resumen = schemas.RutaResumen(
+                id=parada_fija.ruta.id_ruta_fija,
+                nombre=parada_fija.ruta.nombre
+            )
+        else:
+            ruta_resumen = None
+
+        asistencia = (
+            db.query(models.Asistencia)
+            .filter_by(id_estudiante=est.id_estudiante)
+            .order_by(models.Asistencia.fecha.desc())
+            .first()
+        )
 
         if asistencia:
             asistencia_schema = schemas.AsistenciaHoyResponse(
@@ -114,10 +130,9 @@ def listar_estudiantes_con_asistencia_hoy(
                 asiste=asistencia.asiste
             )
         else:
-            # Asistencia implícita (por defecto asiste)
             asistencia_schema = schemas.AsistenciaHoyResponse(
                 fecha=date.today(),
-                asiste=True
+                asiste=True  # Asistencia implícita
             )
 
         resultado.append(schemas.EstudianteConAsistenciaHoy(
@@ -130,6 +145,7 @@ def listar_estudiantes_con_asistencia_hoy(
         ))
 
     return resultado
+
 
 @router.get("/estudiantesenRutaActiva", response_model=List[schemas.EstudianteHoyConParada])
 def listar_estudiantes_en_ruta_activa(
@@ -309,19 +325,20 @@ def generar_ruta_dia(
         )
         db.add(parada)
 
+    tokens_apoderados = set()
+
+    for parada_fija in ruta_fija.paradas:
         if not parada_fija.es_destino_final and parada_fija.id_estudiante:
             estudiante = db.query(models.Estudiante).filter_by(id_estudiante=parada_fija.id_estudiante).first()
             if estudiante and estudiante.apoderado and estudiante.apoderado.usuario:
                 token_obj = estudiante.apoderado.usuario.token_firebase
                 if token_obj and token_obj.token:
-                    notificaciones.enviar_notificacion_inicio_ruta(
-                        nombre_conductor=nombre_conductor,
-                        token=token_obj.token
-                    )
-                    tokens_apoderados.add(token_obj.token)
+                    tokens_apoderados.add(token_obj.token)  # Solo lo agregas al set
 
+# Enviar notificación solo una vez por token único
     for token in tokens_apoderados:
         notificaciones.enviar_notificacion_inicio_ruta(nombre_conductor, token)
+
 
     db.commit()
     db.refresh(nueva_ruta)
@@ -444,6 +461,7 @@ def recoger_estudiante(
         longitud=parada.longitud,
         recogido=parada.recogido,
         entregado=parada.entregado,
+        es_hijo=False,
         estudiante=schemas.EstudianteResponse(
             id_estudiante=estudiante.id_estudiante,
             nombre=estudiante.nombre,
@@ -514,6 +532,7 @@ def recalcular_ruta_dia(
                 longitud=parada.longitud,
                 recogido=parada.recogido,
                 entregado=parada.entregado,
+                es_hijo=False,  
                 estudiante=schemas.EstudianteSimple.from_orm(estudiante) if estudiante else None
             )
         )
@@ -522,6 +541,7 @@ def recalcular_ruta_dia(
         id_ruta=ruta.id_ruta,
         fecha=ruta.fecha,
         estado=ruta.estado,
+        tipo=ruta.tipo,
         hora_inicio=ruta.hora_inicio,
         id_acompanante=ruta.id_acompanante,
         paradas=parada_responses
@@ -637,6 +657,7 @@ def entregar_estudiante(
         longitud=parada.longitud,
         recogido=parada.recogido,
         entregado=parada.entregado,
+        es_hijo=False,
         estudiante=schemas.EstudianteResponse(
             id_estudiante=estudiante.id_estudiante,
             nombre=estudiante.nombre,
