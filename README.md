@@ -1,65 +1,47 @@
-Endpoints esenciales (mínimo viable)
+# Endpoints esenciales (prefijo /api si aplica)
+# Requieren Bearer JWT, salvo /auth/login y /auth/refresh
 
-Prefijo base (si aplica): /api. Requieren Bearer JWT salvo login.
+# Auth
+POST   /auth/login
+POST   /auth/refresh
 
-Auth
+# Usuarios / Roles (solo administrador)
+GET    /usuarios
+POST   /usuarios
+GET    /conductores
+GET    /apoderados
+GET    /estudiantes
+POST   /estudiantes
 
-POST /auth/login — obtiene access_token y refresh_token.
+# Rutas fijas (solo administrador)
+POST   /ruta-fija
+PUT    /ruta-fija/{id}
+GET    /ruta-fija
+GET    /ruta-fija/{id}
 
-POST /auth/refresh — renueva access_token.
+# Asistencia (apoderado)
+POST   /asistencia
 
-Usuarios / Roles (admin)
+# Ruta del Día (conductor)
+GET    /mis-estudiantes-hoy
+POST   /generar-ruta-dia/{id_ruta_fija}
+GET    /ruta/activa
+PUT    /ruta/finalizar
 
-GET /usuarios — listado (filtros/paginación opcional).
+# Paradas (conductor)
+PUT    /parada/{id_parada}/recoger
+PUT    /parada/{id_parada}/entregar
 
-POST /usuarios — crear usuario (tipo_usuario: administrador/conductor/apoderado).
+# Ubicación y notificaciones
+PUT    /conductor/ubicacion
+POST   /firebase/token
 
-GET /conductores · GET /apoderados · GET /estudiantes
+flowchart TD
+  A[1) Admin crea usuarios y Rutas Fijas (ida/vuelta)] --> B[2) Apoderado marca asistencia (o presente por defecto)]
+  B --> C[3) Conductor genera Ruta del Día desde Ruta Fija]
+  C --> D[4) Conductor marca RECoger / ENTregar]
+  D --> E[5) API actualiza Ruta Activa y notifica al apoderado]
+  E --> F[6) Consultas en vivo: GET /ruta/activa (conductor/apoderado)]
+  F --> G[7) Finalizar ruta: PUT /ruta/finalizar]
+  G --> H[8) Opcional: PUT /conductor/ubicacion]
 
-POST /estudiantes — registra estudiante (incluye direcciones/coordenadas).
-
-Rutas fijas (admin)
-
-POST /ruta-fija — crea ida (puede incluir parada final colegio) o vuelta (invierte ida y toma último como destino final).
-
-PUT /ruta-fija/{id} — edita; en vuelta detecta parada final automáticamente.
-
-GET /ruta-fija · GET /ruta-fija/{id} — consulta definición con paradas.
-
-Asistencia (apoderado)
-
-POST /asistencia — marca (in)asistencia del día. Si no se marca, se considera presente por defecto (configurable).
-
-Ruta del Día (conductor)
-
-GET /mis-estudiantes-hoy — estudiantes del conductor con estado del día.
-
-POST /generar-ruta-dia/{id_ruta_fija} — crea la ruta del día (solo asistentes + copia parada final).
-
-GET /ruta/activa — devuelve la ruta en curso (para apoderado incluye es_hijo y tipo ida/vuelta).
-
-PUT /ruta/finalizar — cierra ruta (manual o automática si todos entregados).
-
-Paradas (conductor)
-
-PUT /parada/{id_parada}/recoger — marca recogido y retorna ruta actualizada.
-
-PUT /parada/{id_parada}/entregar — marca entregado y retorna ruta actualizada.
-
-En ambas se dispara notificación al apoderado correspondiente.
-
-Ubicación y notificaciones
-
-PUT /conductor/ubicacion — actualiza geoloc del conductor.
-
-POST /firebase/token — registra/actualiza token FCM del usuario autenticado.
-
-Flujos clave
-
-Admin crea usuarios y rutas fijas (ida/vuelta con orden y destino final).
-
-Apoderado marca asistencia (o queda presente por defecto).
-
-Conductor genera la Ruta del Día y ejecuta recogido/entregado (ruta activa y notificaciones se actualizan).
-
-Se finaliza la ruta (manual/auto).
